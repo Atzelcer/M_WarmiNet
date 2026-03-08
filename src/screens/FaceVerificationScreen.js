@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,21 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { Camera, CameraType } from 'expo-camera';
 import { COLORS } from '../constants/colors';
 
 export default function FaceVerificationScreen({ navigation }) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [cameraReady, setCameraReady] = useState(true);
+  const [hasPermission, setHasPermission] = useState(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const cameraRef = useRef(null);
 
   useEffect(() => {
-    // Simulación sin cámara real para evitar crashes
-    setCameraReady(true);
+    (async () => {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
+    })();
   }, []);
 
   const startScan = () => {
@@ -38,7 +43,7 @@ export default function FaceVerificationScreen({ navigation }) {
         }
         return prev + 2;
       });
-    }, 100); // 5 segundos total (100 pasos de 50ms)
+    }, 100);
   };
 
   const completeScan = () => {
@@ -57,7 +62,31 @@ export default function FaceVerificationScreen({ navigation }) {
     }, 500);
   };
 
+  if (hasPermission === null) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
+  if (hasPermission === false) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>← Volver</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Verificación de rostro</Text>
+        </View>
+        <View style={styles.content}>
+          <Text style={styles.errorText}>
+            ⚠️ No tenemos acceso a tu cámara. Por favor habilita los permisos en configuración.
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -78,17 +107,22 @@ export default function FaceVerificationScreen({ navigation }) {
         </Text>
 
         <View style={styles.cameraContainer}>
-          <View style={styles.cameraPlaceholder}>
-            <View style={styles.faceFrame}>
-              <Text style={styles.faceIcon}>👤</Text>
-              {scanning && (
-                <View style={styles.scanLine}>
-                  <View style={styles.scanLineBar} />
-                </View>
-              )}
+          <Camera
+            ref={cameraRef}
+            style={styles.camera}
+            type={CameraType.front}
+            onCameraReady={() => setCameraReady(true)}
+          >
+            <View style={styles.cameraOverlay}>
+              <View style={styles.faceFrame}>
+                {scanning && (
+                  <View style={styles.scanLine}>
+                    <View style={styles.scanLineBar} />
+                  </View>
+                )}
+              </View>
             </View>
-            <Text style={styles.cameraSubtext}>Simulación de verificación facial</Text>
-          </View>
+          </Camera>
         </View>
 
         {scanning && (
@@ -174,11 +208,11 @@ const styles = StyleSheet.create({
   camera: {
     flex: 1,
   },
-  overlay: {
+  cameraOverlay: {
     flex: 1,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
   },
   faceFrame: {
     width: 250,
@@ -257,66 +291,9 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   errorText: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 16,
     color: COLORS.danger,
     textAlign: 'center',
-    marginBottom: 10,
-  },
-  errorSubtext: {
-    fontSize: 14,
-    color: COLORS.neutral,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  button: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: 25,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  cameraPlaceholder: {
-    flex: 1,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    borderStyle: 'dashed',
-  },
-  faceIcon: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 10,
-  },
-  cameraSubtext: {
-    fontSize: 14,
-    color: COLORS.neutral,
-    textAlign: 'center',
-    marginTop: 20,
-  },
-  webCameraPlaceholder: {
-    flex: 1,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    borderStyle: 'dashed',
-  },
-  webCameraText: {
-    fontSize: 120,
-    marginBottom: 20,
-  },
-  webCameraSubtext: {
-    fontSize: 16,
-    color: COLORS.neutral,
-    textAlign: 'center',
+    marginTop: 50,
   },
 });

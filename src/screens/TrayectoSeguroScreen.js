@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,336 +6,375 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Vibration,
   Modal,
+  TextInput,
 } from 'react-native';
 import MapView, { Marker, Polyline } from '../components/MapViewWeb';
-import * as Haptics from 'expo-haptics';
-import { COLORS } from '../constants/colors';
-import { RUTAS_SEGURAS, USUARIOS_DEMO } from '../data/mockData';
-import { sendSNSNotification } from '../services/awsService';
+import { COLORS, SUCRE_COORDINATES } from '../constants/colors';
+import { RUTAS_SEGURAS } from '../data/mockData';
 
 export default function TrayectoSeguroScreen({ navigation }) {
   const [rutaActual, setRutaActual] = useState(0);
-  const [trayectoIniciado, setTrayectoIniciado] = useState(false);
-  const [tiempoRestante, setTiempoRestante] = useState(0);
-  const [modalExtender, setModalExtender] = useState(false);
-  const [extendido, setExtendido] = useState(false);
-  const [alertaEnviada, setAlertaEnviada] = useState(false);
+  const [simulando, setSimulando] = useState(false);
+  const [trayecto, setTrayecto] = useState([]);
+  const [trayectoDesvio, setTrayectoDesvio] = useState([]);
+  const [posicionActual, setPosicionActual] = useState(null);
+  const [modalFormulario, setModalFormulario] = useState(false);
+  const [formData, setFormData] = useState({
+    inicio: '',
+    destino: '',
+  });
 
-  const timerRef = useRef(null);
   const ruta = RUTAS_SEGURAS[rutaActual];
 
-  useEffect(() => {
-    if (trayectoIniciado && tiempoRestante > 0) {
-      timerRef.current = setInterval(() => {
-        setTiempoRestante((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            preguntarExtension();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+  // Generar trayecto entre dos puntos
+  const generarTrayecto = (inicio, fin, numPuntos = 15) => {
+    const puntos = [];
+    for (let i = 0; i <= numPuntos; i++) {
+      const ratio = i / numPuntos;
+      const lat = inicio.latitude + (fin.latitude - inicio.latitude) * ratio;
+      const lng = inicio.longitude + (fin.longitude - inicio.longitude) * ratio;
+      puntos.push({ latitude: lat, longitude: lng });
     }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [trayectoIniciado, tiempoRestante]);
-
-  const iniciarTrayecto = () => {
-    setTrayectoIniciado(true);
-    setTiempoRestante(ruta.tiempoDemo);
-    setExtendido(false);
-    setAlertaEnviada(false);
-
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    
-    Alert.alert(
-      '✅ Trayecto iniciado',
-      `Ruta: ${ruta.nombre}\nTiempo: ${ruta.tiempoMinutos} minutos\n\n(Demo: ${ruta.tiempoDemo} segundos)\n\nTus personas de confianza serán notificadas si no llegas a tiempo.`
-    );
+    return puntos;
   };
 
-  const preguntarExtension = () => {
-    Vibration.vibrate([0, 500, 200, 500]);
+  // Generar desvío RUTA 2: Se desvía pero llega
+  const generarDesvioRuta2 = (ruta) => {
+    const mitad = Math.floor(ruta.length / 2);
+    const desvio = [];
     
-    if (rutaActual === 1) {
-      // RUTA 2: Usuario extiende
-      setModalExtender(true);
-    } else {
-      // RUTA 1 y 3: No responde, se envía alerta
-      setTimeout(() => {
-        enviarAlertaFamilia();
-      }, 3000);
+    // Primera mitad normal
+    for (let i = 0; i < mitad; i++) {
+      desvio.push(ruta[i]);
     }
-  };
-
-  const extenderTiempo = () => {
-    setModalExtender(false);
-    setExtendido(true);
-    setTiempoRestante(ruta.tiempoDemo);
     
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    
-    Alert.alert(
-      '✅ Tiempo extendido',
-      `Se agregaron ${ruta.tiempoMinutos} minutos más a tu trayecto.`
-    );
-  };
-
-  const enviarAlertaFamilia = () => {
-    setAlertaEnviada(true);
-    
-    Vibration.vibrate([0, 1000, 500, 1000]);
-    
-    // Simular envío SNS
-    USUARIOS_DEMO.mujer.personasConfianza.forEach((persona) => {
-      sendSNSNotification(
-        persona.celular,
-        `ALERTA: ${USUARIOS_DEMO.mujer.nombre} no llegó a su destino. Ruta: ${ruta.nombre}`
-      );
+    // Desvío
+    const puntoDesvio = ruta[mitad];
+    desvio.push({
+      latitude: puntoDesvio.latitude + 0.001,
+      longitude: puntoDesvio.longitude + 0.0015,
     });
-
-    Alert.alert(
-      '⚠️ Alerta enviada a familia',
-      `Se notificó a tus personas de confianza:\n\n` +
-        USUARIOS_DEMO.mujer.personasConfianza.map(
-          (p) => `• ${p.nombre} (${p.relacion}): ${p.celular}`
-        ).join('\n') +
-        `\n\nRuta: ${ruta.nombre}\nÚltima ubicación compartida`,
-      [{ text: 'OK' }]
-    );
-  };
-
-  const confirmarLlegada = () => {
-    Alert.alert(
-      '✅ Llegada confirmada',
-      '¡Llegaste a salvo! Tus personas de confianza serán notificadas.',
-      [
-        {
-          text: 'OK',
-          onPress: () => resetearDemo(),
-        },
-      ]
-    );
+    desvio.push({
+      latitude: puntoDesvio.latitude + 0.0015,
+      longitude: puntoDesvio.longitude + 0.001,
+    });
     
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    // Regresa y continúa hasta el final
+    for (let i = mitad + 1; i < ruta.length; i++) {
+      desvio.push(ruta[i]);
+    }
+    
+    return desvio;
+  };
 
-    // Simular envío SNS de confirmación
-    sendSNSNotification(
-      USUARIOS_DEMO.mujer.personasConfianza[0].celular,
-      `${USUARIOS_DEMO.mujer.nombre} llegó a salvo a su destino.`
+  // Generar desvío RUTA 3: Se desvía y se queda
+  const generarDesvioRuta3 = (ruta) => {
+    const mitad = Math.floor(ruta.length / 2);
+    const desvio = [];
+    
+    // Primera mitad normal
+    for (let i = 0; i < mitad; i++) {
+      desvio.push(ruta[i]);
+    }
+    
+    // Se desvía y se queda ahí
+    const puntoDesvio = ruta[mitad];
+    desvio.push({
+      latitude: puntoDesvio.latitude + 0.002,
+      longitude: puntoDesvio.longitude - 0.001,
+    });
+    desvio.push({
+      latitude: puntoDesvio.latitude + 0.0025,
+      longitude: puntoDesvio.longitude - 0.0015,
+    });
+    // Se queda aquí, no continúa al destino
+    
+    return desvio;
+  };
+
+  const iniciarSimulacion = () => {
+    setTrayecto([]);
+    setTrayectoDesvio([]);
+    setPosicionActual(ruta.inicio);
+    setSimulando(true);
+
+    // Generar trayecto base
+    const trayectoBase = generarTrayecto(ruta.inicio, ruta.fin);
+    
+    let trayectoFinal = trayectoBase;
+    let tienDesvio = false;
+
+    // Aplicar desvíos según el caso
+    if (rutaActual === 1) {
+      // Ruta 2: Se desvía pero llega
+      trayectoFinal = generarDesvioRuta2(trayectoBase);
+      tienDesvio = true;
+    } else if (rutaActual === 2) {
+      // Ruta 3: Se desvía y se queda
+      trayectoFinal = generarDesvioRuta3(trayectoBase);
+      tienDesvio = true;
+    }
+
+    Alert.alert(
+      '🛤️ Trayecto Seguro Iniciado',
+      `Ruta: ${ruta.nombre}\n\nTus contactos de confianza recibirán notificaciones de tu ubicación.\n\n${tienDesvio ? '⚠️ En esta simulación ocurrirá un desvío' : '✅ Seguirás la ruta correctamente'}`,
+      [{ text: 'Iniciar', onPress: () => simularRecorrido(trayectoFinal, tienDesvio) }]
     );
   };
 
-  const resetearDemo = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
+  const simularRecorrido = (trayectoFinal, tienDesvio) => {
+    let paso = 0;
+
+    const intervalo = setInterval(() => {
+      if (paso < trayectoFinal.length) {
+        const punto = trayectoFinal[paso];
+        setPosicionActual(punto);
+        
+        // Agregar punto al trayecto (azul)
+        setTrayecto((prev) => [...prev, punto]);
+        
+        paso++;
+      } else {
+        clearInterval(intervalo);
+        setSimulando(false);
+        
+        // Verificar si llegó al destino
+        const ultimoPunto = trayectoFinal[trayectoFinal.length - 1];
+        const distanciaFinal = calcularDistancia(
+          ultimoPunto.latitude,
+          ultimoPunto.longitude,
+          ruta.fin.latitude,
+          ruta.fin.longitude
+        );
+
+        if (distanciaFinal < 50) {
+          // Llegó al destino
+          Alert.alert(
+            '✅ Destino alcanzado',
+            `¡Llegaste a salvo!\n\n${ruta.nombre}\n\nTus contactos han sido notificados.`,
+            [{ text: 'OK' }]
+          );
+        } else {
+          // No llegó (se desvió y se quedó)
+          Alert.alert(
+            '⚠️ Desvío detectado',
+            `Tu ubicación se detuvo fuera de la ruta.\n\nDistancia al destino: ${Math.round(distanciaFinal)}m\n\nTus contactos de confianza han sido alertados.`,
+            [
+              { text: 'Estoy bien', onPress: () => console.log('Usuario está bien') },
+              { text: 'Necesito ayuda', style: 'destructive', onPress: () => Alert.alert('Alerta enviada', 'Tus contactos han sido notificados') },
+            ]
+          );
+        }
+      }
+    }, 500);
+  };
+
+  const calcularDistancia = (lat1, lon1, lat2, lon2) => {
+    const R = 6371000;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const abrirFormulario = () => {
+    setModalFormulario(true);
+  };
+
+  const guardarRutaPersonalizada = () => {
+    if (!formData.inicio.trim() || !formData.destino.trim()) {
+      Alert.alert('Datos incompletos', 'Por favor completa ambos campos');
+      return;
     }
-    setTrayectoIniciado(false);
-    setTiempoRestante(0);
-    setModalExtender(false);
-    setExtendido(false);
-    setAlertaEnviada(false);
-  };
 
-  const cambiarRuta = (index) => {
-    resetearDemo();
-    setRutaActual(index);
-  };
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    Alert.alert(
+      '✅ Ruta guardada',
+      `Tu ruta personalizada ha sido guardada:\n\n📍 Inicio: ${formData.inicio}\n🎯 Destino: ${formData.destino}\n\nPodrás iniciarla cuando quieras.`,
+      [{ text: 'OK', onPress: () => setModalFormulario(false) }]
+    );
   };
 
   return (
     <View style={styles.container}>
+      {/* Mapa */}
+      <MapView
+        style={styles.map}
+        initialRegion={SUCRE_COORDINATES}
+        showsUserLocation={false}
+      >
+        {/* Marcador de inicio */}
+        <Marker
+          coordinate={ruta.inicio}
+          pinColor="#4285F4"
+          title="📍 Inicio"
+          description={ruta.nombre.split('→')[0]}
+        />
+
+        {/* Marcador de fin */}
+        <Marker
+          coordinate={ruta.fin}
+          pinColor="#34A853"
+          title="🎯 Destino"
+          description={ruta.nombre.split('→')[1]}
+        />
+
+        {/* Línea del trayecto recorrido (azul) */}
+        {trayecto.length > 0 && (
+          <Polyline
+            coordinates={trayecto}
+            strokeColor="#4285F4"
+            strokeWidth={5}
+          />
+        )}
+
+        {/* Posición actual */}
+        {posicionActual && (
+          <Marker
+            coordinate={posicionActual}
+            pinColor={simulando ? "#FFD700" : "#4285F4"}
+            title={simulando ? "🚶‍♀️ En movimiento" : "Posición final"}
+          />
+        )}
+      </MapView>
+
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>← Volver</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={styles.backButton}>← Volver</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Trayecto Seguro</Text>
+        <Text style={styles.headerTitle}>🛤️ Trayecto Seguro</Text>
       </View>
 
       {/* Selector de rutas */}
-      <View style={styles.rutaSelector}>
-        <Text style={styles.rutaLabel}>Rutas de demo:</Text>
+      <View style={styles.rutasContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {RUTAS_SEGURAS.map((r, index) => (
             <TouchableOpacity
               key={r.id}
               style={[
-                styles.rutaButton,
-                rutaActual === index && styles.rutaButtonActive,
+                styles.rutaCard,
+                rutaActual === index && styles.rutaCardActive,
               ]}
-              onPress={() => cambiarRuta(index)}
+              onPress={() => {
+                if (!simulando) {
+                  setRutaActual(index);
+                  setTrayecto([]);
+                  setPosicionActual(null);
+                }
+              }}
             >
-              <Text
-                style={[
-                  styles.rutaButtonText,
-                  rutaActual === index && styles.rutaButtonTextActive,
-                ]}
-              >
-                {index + 1}️⃣ {r.nombre}
+              <Text style={[
+                styles.rutaNumero,
+                rutaActual === index && styles.rutaNumeroActive,
+              ]}>
+                {r.id}
+              </Text>
+              <Text style={[
+                styles.rutaNombre,
+                rutaActual === index && styles.rutaNombreActive,
+              ]}>
+                {r.nombre}
+              </Text>
+              <Text style={[
+                styles.rutaEstado,
+                rutaActual === index && styles.rutaEstadoActive,
+              ]}>
+                {r.estado === 'COMPLETO' && '✅ Llegó bien'}
+                {r.estado === 'DESVIO_LLEGO' && '⚠️ Desvío → Llegó'}
+                {r.estado === 'DESVIO_QUEDO' && '❌ Desvió y quedó'}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* Mapa */}
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: (ruta.inicio.latitude + ruta.fin.latitude) / 2,
-          longitude: (ruta.inicio.longitude + ruta.fin.longitude) / 2,
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
-        }}
-        showsUserLocation={true}
+      {/* Info de ruta */}
+      <View style={styles.infoContainer}>
+        <Text style={styles.infoTitulo}>{ruta.nombre}</Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>📍 Inicio:</Text>
+          <Text style={styles.infoValue}>{ruta.nombre.split('→')[0]}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>🎯 Destino:</Text>
+          <Text style={styles.infoValue}>{ruta.nombre.split('→')[1]}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>⏱️ Tiempo:</Text>
+          <Text style={styles.infoValue}>~{ruta.tiempoMinutos} min</Text>
+        </View>
+      </View>
+
+      {/* Botones de acción */}
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.iniciarButton, simulando && styles.iniciarButtonDisabled]}
+          onPress={iniciarSimulacion}
+          disabled={simulando}
+        >
+          <Text style={styles.iniciarButtonText}>
+            {simulando ? '🚶‍♀️ En camino...' : '▶️ Iniciar Trayecto'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.personalizarButton}
+          onPress={abrirFormulario}
+        >
+          <Text style={styles.personalizarButtonText}>
+            ⚙️ Crear ruta personalizada
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Modal de formulario */}
+      <Modal
+        visible={modalFormulario}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalFormulario(false)}
       >
-        <Marker
-          coordinate={ruta.inicio}
-          pinColor={COLORS.success}
-          title="Inicio"
-          description={ruta.nombre.split(' → ')[0]}
-        />
-        <Marker
-          coordinate={ruta.fin}
-          pinColor={COLORS.primary}
-          title="Destino"
-          description={ruta.nombre.split(' → ')[1]}
-        />
-        {trayectoIniciado && (
-          <Polyline
-            coordinates={[ruta.inicio, ruta.fin]}
-            strokeColor={alertaEnviada ? COLORS.danger : COLORS.secondary3}
-            strokeWidth={4}
-          />
-        )}
-      </MapView>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitulo}>🗺️ Nueva Ruta</Text>
 
-      {/* Panel de control */}
-      <View style={styles.controlPanel}>
-        {!trayectoIniciado ? (
-          <View>
-            <Text style={styles.rutaTitle}>{ruta.nombre}</Text>
-            <View style={styles.rutaInfo}>
-              <Text style={styles.rutaInfoItem}>
-                ⏱️ Tiempo estimado: {ruta.tiempoMinutos} min
-              </Text>
-              <Text style={styles.rutaInfoItem}>
-                📱 Demo: {ruta.tiempoDemo} segundos
-              </Text>
-            </View>
+            <Text style={styles.label}>📍 Punto de inicio</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.inicio}
+              onChangeText={(text) => setFormData({ ...formData, inicio: text })}
+              placeholder="Ej: Mi casa, Calle Bolívar 123"
+              placeholderTextColor={COLORS.neutral}
+            />
+
+            <Text style={styles.label}>🎯 Punto de llegada</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.destino}
+              onChangeText={(text) => setFormData({ ...formData, destino: text })}
+              placeholder="Ej: Universidad USFX"
+              placeholderTextColor={COLORS.neutral}
+            />
 
             <TouchableOpacity
-              style={styles.iniciarButton}
-              onPress={iniciarTrayecto}
+              style={styles.guardarButton}
+              onPress={guardarRutaPersonalizada}
             >
-              <Text style={styles.iniciarButtonText}>🛣️ Iniciar trayecto</Text>
-            </TouchableOpacity>
-
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>
-                ℹ️ Comportamiento según ruta:{'\n\n'}
-                • Ruta 1: No responde → Alerta enviada{'\n'}
-                • Ruta 2: Extiende tiempo correctamente{'\n'}
-                • Ruta 3: No responde → Alerta enviada
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <View>
-            <Text style={styles.trayectoTitle}>🛣️ Trayecto en curso</Text>
-            
-            <View style={styles.timerContainer}>
-              <Text style={styles.timerLabel}>Tiempo restante:</Text>
-              <Text
-                style={[
-                  styles.timerText,
-                  tiempoRestante <= 10 && styles.timerTextWarning,
-                ]}
-              >
-                {formatTime(tiempoRestante)}
-              </Text>
-            </View>
-
-            {extendido && (
-              <View style={styles.extendidoBadge}>
-                <Text style={styles.extendidoText}>✅ Tiempo extendido</Text>
-              </View>
-            )}
-
-            {alertaEnviada && (
-              <View style={styles.alertaBadge}>
-                <Text style={styles.alertaText}>
-                  ⚠️ Alerta enviada a familia
-                </Text>
-              </View>
-            )}
-
-            <TouchableOpacity
-              style={styles.confirmarButton}
-              onPress={confirmarLlegada}
-            >
-              <Text style={styles.confirmarButtonText}>✅ Confirmar llegada</Text>
+              <Text style={styles.guardarButtonText}>✓ Guardar ruta</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.cancelarButton}
-              onPress={resetearDemo}
+              onPress={() => setModalFormulario(false)}
             >
-              <Text style={styles.cancelarButtonText}>❌ Cancelar trayecto</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
-      {/* Modal extender tiempo */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={modalExtender}
-        onRequestClose={() => setModalExtender(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>⏰ Tiempo agotado</Text>
-            <Text style={styles.modalText}>
-              ¿Deseas extender tu tiempo?{'\n\n'}
-              Si no respondes, se notificará a tu familia.
-            </Text>
-
-            <TouchableOpacity
-              style={styles.modalButtonPrimary}
-              onPress={extenderTiempo}
-            >
-              <Text style={styles.modalButtonPrimaryText}>
-                ✅ Extender tiempo
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.modalButtonSecondary}
-              onPress={() => {
-                setModalExtender(false);
-                setTimeout(() => enviarAlertaFamilia(), 2000);
-              }}
-            >
-              <Text style={styles.modalButtonSecondaryText}>
-                ❌ No responder (simular)
-              </Text>
+              <Text style={styles.cancelarButtonText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -347,232 +386,198 @@ export default function TrayectoSeguroScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+  },
+  map: {
+    flex: 1,
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     backgroundColor: COLORS.secondary3,
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
   },
   backButton: {
-    marginBottom: 5,
-  },
-  backButtonText: {
-    color: COLORS.white,
+    color: 'white',
     fontSize: 16,
+    marginBottom: 5,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: COLORS.white,
+    color: 'white',
   },
-  rutaSelector: {
-    backgroundColor: '#f3e5f5',
-    padding: 12,
+  rutasContainer: {
+    position: 'absolute',
+    top: 120,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 10,
   },
-  rutaLabel: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: COLORS.black,
-    marginBottom: 8,
+  rutaCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 5,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 15,
+    minWidth: 140,
+    alignItems: 'center',
+    elevation: 3,
   },
-  rutaButton: {
-    backgroundColor: COLORS.white,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 2,
-    borderColor: COLORS.neutral,
-  },
-  rutaButtonActive: {
+  rutaCardActive: {
     backgroundColor: COLORS.secondary3,
-    borderColor: COLORS.secondary3,
   },
-  rutaButtonText: {
-    color: COLORS.black,
-    fontSize: 13,
+  rutaNumero: {
+    fontSize: 18,
     fontWeight: 'bold',
+    color: COLORS.secondary3,
   },
-  rutaButtonTextActive: {
-    color: COLORS.white,
+  rutaNumeroActive: {
+    color: 'white',
   },
-  map: {
-    flex: 1,
+  rutaNombre: {
+    fontSize: 12,
+    color: COLORS.primary,
+    textAlign: 'center',
+    marginTop: 5,
   },
-  controlPanel: {
-    backgroundColor: COLORS.white,
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+  rutaNombreActive: {
+    color: 'white',
   },
-  rutaTitle: {
-    fontSize: 20,
+  rutaEstado: {
+    fontSize: 10,
+    color: COLORS.neutral,
+    marginTop: 3,
+  },
+  rutaEstadoActive: {
+    color: 'white',
+  },
+  infoContainer: {
+    position: 'absolute',
+    top: 200,
+    left: 20,
+    right: 20,
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 15,
+    elevation: 5,
+  },
+  infoTitulo: {
+    fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.primary,
-    marginBottom: 15,
-    textAlign: 'center',
+    marginBottom: 10,
   },
-  rutaInfo: {
-    backgroundColor: '#f5f5f5',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 3,
   },
-  rutaInfoItem: {
-    fontSize: 15,
-    color: COLORS.black,
-    marginBottom: 5,
+  infoLabel: {
+    fontSize: 14,
+    color: COLORS.neutral,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  buttonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    elevation: 10,
   },
   iniciarButton: {
     backgroundColor: COLORS.secondary3,
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: 'center',
-    marginBottom: 15,
-    elevation: 3,
+    marginBottom: 10,
+    elevation: 5,
+  },
+  iniciarButtonDisabled: {
+    backgroundColor: COLORS.neutral,
   },
   iniciarButtonText: {
-    color: COLORS.white,
+    color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
   },
-  infoBox: {
-    backgroundColor: '#e8f5e9',
-    padding: 15,
-    borderRadius: 10,
-  },
-  infoText: {
-    fontSize: 12,
-    color: '#2e7d32',
-    lineHeight: 20,
-  },
-  trayectoTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.secondary3,
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  timerContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-    backgroundColor: '#f5f5f5',
-    padding: 20,
-    borderRadius: 15,
-  },
-  timerLabel: {
-    fontSize: 16,
-    color: COLORS.neutral,
-    marginBottom: 10,
-  },
-  timerText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: COLORS.secondary3,
-  },
-  timerTextWarning: {
-    color: COLORS.danger,
-  },
-  extendidoBadge: {
-    backgroundColor: COLORS.success,
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 15,
-  },
-  extendidoText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  alertaBadge: {
-    backgroundColor: COLORS.danger,
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 15,
-  },
-  alertaText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  confirmarButton: {
-    backgroundColor: COLORS.success,
+  personalizarButton: {
+    backgroundColor: COLORS.primary,
     paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  confirmarButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cancelarButton: {
-    backgroundColor: COLORS.neutral,
-    paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 25,
     alignItems: 'center',
   },
-  cancelarButtonText: {
-    color: COLORS.white,
+  personalizarButtonText: {
+    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   modalContent: {
-    backgroundColor: COLORS.white,
+    backgroundColor: 'white',
     borderRadius: 20,
-    padding: 30,
-    width: '85%',
-    alignItems: 'center',
+    padding: 25,
+    width: '100%',
   },
-  modalTitle: {
+  modalTitulo: {
     fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.primary,
-    marginBottom: 15,
-  },
-  modalText: {
-    fontSize: 16,
-    color: COLORS.black,
     textAlign: 'center',
-    marginBottom: 25,
-    lineHeight: 24,
+    marginBottom: 20,
   },
-  modalButtonPrimary: {
-    backgroundColor: COLORS.success,
-    paddingVertical: 14,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    marginBottom: 10,
-    width: '100%',
-  },
-  modalButtonPrimaryText: {
-    color: COLORS.white,
-    fontSize: 16,
+  label: {
+    fontSize: 14,
     fontWeight: 'bold',
-    textAlign: 'center',
+    color: COLORS.primary,
+    marginBottom: 8,
+    marginTop: 10,
   },
-  modalButtonSecondary: {
-    backgroundColor: COLORS.neutral,
-    paddingVertical: 14,
-    paddingHorizontal: 30,
+  input: {
+    backgroundColor: '#f5f5f5',
     borderRadius: 10,
-    width: '100%',
+    padding: 15,
+    fontSize: 15,
+    color: COLORS.primary,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
-  modalButtonSecondaryText: {
-    color: COLORS.white,
-    fontSize: 16,
+  guardarButton: {
+    backgroundColor: COLORS.secondary3,
+    paddingVertical: 16,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  guardarButtonText: {
+    color: 'white',
+    fontSize: 18,
     fontWeight: 'bold',
-    textAlign: 'center',
+  },
+  cancelarButton: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  cancelarButtonText: {
+    color: COLORS.neutral,
+    fontSize: 16,
   },
 });

@@ -9,8 +9,10 @@ import {
   Alert,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
+import { useUser } from '../context/UserContext';
 
 export default function RegisterFormScreen({ navigation }) {
+  const { saveUserData } = useUser();
   const [formData, setFormData] = useState({
     nombreCompleto: '',
     celular: '',
@@ -49,7 +51,7 @@ export default function RegisterFormScreen({ navigation }) {
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     // Validar campos
     if (!formData.nombreCompleto || !formData.celular) {
       Alert.alert('Datos incompletos', 'Por favor completa todos tus datos personales');
@@ -66,11 +68,14 @@ export default function RegisterFormScreen({ navigation }) {
       return;
     }
 
-    // Guardar datos en contexto o almacenamiento local (simulado)
-    console.log('Datos registrados:', { formData, personasConfianza });
-
-    // Continuar a verificación de rostro
-    navigation.navigate('FaceVerification');
+    // Guardar datos en AsyncStorage a través del contexto
+    await saveUserData({ formData, personasConfianza });
+    
+    Alert.alert(
+      '✅ Registro exitoso',
+      'Tus datos han sido guardados correctamente',
+      [{ text: 'Continuar', onPress: () => navigation.navigate('FaceVerification') }]
+    );
   };
 
   return (

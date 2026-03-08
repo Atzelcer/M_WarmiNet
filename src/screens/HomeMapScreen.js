@@ -67,12 +67,20 @@ export default function HomeMapScreen({ navigation }) {
         <View style={styles.logoContainer}>
           <Text style={styles.logoText}>WarmiNet</Text>
         </View>
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => navigation.navigate('DemoMenu')}
-        >
-          <Text style={styles.menuButtonText}>≡</Text>
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Text style={styles.profileButtonText}>👤</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuButton}
+            onPress={() => navigation.navigate('DemoMenu')}
+          >
+            <Text style={styles.menuButtonText}>≡</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Botones flotantes */}
@@ -149,6 +157,21 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.white,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.secondary1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileButtonText: {
+    fontSize: 20,
   },
   menuButton: {
     width: 40,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,261 +8,316 @@ import {
   Image,
   Modal,
   Alert,
-  TextInput,
-  Vibration,
+  Animated,
 } from 'react-native';
 import MapView, { Marker, Circle } from '../components/MapViewWeb';
-import * as Haptics from 'expo-haptics';
 import { COLORS, SUCRE_COORDINATES } from '../constants/colors';
 import { PUNTOS_ROJOS } from '../data/mockData';
+import MarcarPuntoModal from '../components/MarcarPuntoModal';
+import RadarAnimation from '../components/RadarAnimation';
+import { Audio } from 'expo-av';
 
 export default function PuntosRojosScreen({ navigation }) {
-  const [escenarioActual, setEscenarioActual] = useState(1);
+  const [casoActual, setCasoActual] = useState(0); // 0, 1, 2
   const [modalVisible, setModalVisible] = useState(false);
   const [puntoSeleccionado, setPuntoSeleccionado] = useState(null);
-  const [creandoPunto, setCreandoPunto] = useState(false);
-  const [nuevoPunto, setNuevoPunto] = useState({
-    descripcion: '',
-    coordinate: null,
-  });
-  const [simulandoAcercamiento, setSimulandoAcercamiento] = useState(false);
+  const [modalMarcar, setModalMarcar] = useState(false);
+  const [showRadar, setShowRadar] = useState(false);
+  const [simulando, setSimulando] = useState(false);
+  const [miUbicacion, setMiUbicacion] = useState(SUCRE_COORDINATES);
+  const [distancia, setDistancia] = useState(0);
+  const [soundObject, setSoundObject] = useState(null);
+
+  const casos = [
+    {
+      id: 1,
+      titulo: 'Caso 1: Marcar punto peligroso',
+      descripcion: 'Usa el botón "Marcar Punto" para reportar un lugar peligroso con evidencia fotográfica',
+      punto: PUNTOS_ROJOS[0],
+      tipoSimulacion: 'MARCAR',
+    },
+    {
+      id: 2,
+      titulo: 'Caso 2: Acercamiento a zona peligrosa',
+      descripcion: 'Simulación: Te acercas a una zona reportada y recibes alerta',
+      punto: PUNTOS_ROJOS[1],
+      tipoSimulacion: 'ACERCAMIENTO',
+    },
+    {
+      id: 3,
+      titulo: 'Caso 3: Llegada a punto peligroso',
+      descripcion: 'Simulación: Llegas al punto y se muestra la evidencia y alerta',
+      punto: PUNTOS_ROJOS[2],
+      tipoSimulacion: 'LLEGADA',
+    },
+  ];
+
+  const casoActivo = casos[casoActual];
+
+  useEffect(() => {
+    return () => {
+      if (soundObject) {
+        soundObject.unloadAsync();
+      }
+    };
+  }, []);
+
+  const reproducirAlarma = async () => {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3' },
+        { shouldPlay: true }
+      );
+      setSoundObject(sound);
+    } catch (error) {
+      console.log('Error reproduciendo alarma:', error);
+    }
+  };
+
+  const calcularDistancia = (lat1, lon1, lat2, lon2) => {
+    const R = 6371000; // Radio de la Tierra en metros
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const simularCaso2 = () => {
+    setSimulando(true);
+    setShowRadar(true);
+    const puntoDestino = PUNTOS_ROJOS[1].coordinate;
+    
+    // Iniciar a 100 metros de distancia
+    let paso = 0;
+    const totalPasos = 20;
+    
+    const intervalo = setInterval(() => {
+      paso++;
+      
+      // Calcular posición intermedia moviéndose hacia el punto
+      const progreso = paso / totalPasos;
+      const latActual = miUbicacion.latitude + (puntoDestino.latitude - miUbicacion.latitude) * progreso;
+      const lngActual = miUbicacion.longitude + (puntoDestino.longitude - miUbicacion.longitude) * progreso;
+      
+      setMiUbicacion({ latitude: latActual, longitude: lngActual });
+      
+      const dist = calcularDistancia(latActual, lngActual, puntoDestino.latitude, puntoDestino.longitude);
+      setDistancia(Math.round(dist));
+      
+      // A 30-40 metros: notificación y alarma
+      if (dist <= 40 && dist >= 30 && !soundObject) {
+        reproducirAlarma();
+        Alert.alert(
+          '⚠️ ZONA PELIGROSA CERCA',
+          `Estás a ${Math.round(dist)} metros de un punto peligroso reportado:\n\n"${PUNTOS_ROJOS[1].descripcion}"\n\n¡Ten precaución!`,
+          [{ text: 'Entendido', style: 'destructive' }]
+        );
+      }
+      
+      // Al llegar: detener y mostrar evidencia
+      if (paso >= totalPasos) {
+        clearInterval(intervalo);
+        setSimulando(false);
+        setShowRadar(false);
+        setTimeout(() => {
+          setPuntoSeleccionado(PUNTOS_ROJOS[1]);
+          setModalVisible(true);
+        }, 500);
+      }
+    }, 300);
+  };
+
+  const simularCaso3 = () => {
+    setSimulando(true);
+    setShowRadar(true);
+    const puntoDestino = PUNTOS_ROJOS[2].coordinate;
+    
+    let paso = 0;
+    const totalPasos = 25;
+    
+    const intervalo = setInterval(() => {
+      paso++;
+      
+      const progreso = paso / totalPasos;
+      const latActual = miUbicacion.latitude + (puntoDestino.latitude - miUbicacion.latitude) * progreso;
+      const lngActual = miUbicacion.longitude + (puntoDestino.longitude - miUbicacion.longitude) * progreso;
+      
+      setMiUbicacion({ latitude: latActual, longitude: lngActual });
+      
+      const dist = calcularDistancia(latActual, lngActual, puntoDestino.latitude, puntoDestino.longitude);
+      setDistancia(Math.round(dist));
+      
+      // Al llegar: detener, alarma y mostrar evidencia
+      if (paso >= totalPasos) {
+        clearInterval(intervalo);
+        setSimulando(false);
+        setShowRadar(false);
+        reproducirAlarma();
+        setTimeout(() => {
+          setPuntoSeleccionado(PUNTOS_ROJOS[2]);
+          setModalVisible(true);
+        }, 500);
+      }
+    }, 300);
+  };
+
+  const iniciarSimulacion = () => {
+    const caso = casoActivo;
+    
+    if (caso.tipoSimulacion === 'MARCAR') {
+      setModalMarcar(true);
+    } else if (caso.tipoSimulacion === 'ACERCAMIENTO') {
+      simularCaso2();
+    } else if (caso.tipoSimulacion === 'LLEGADA') {
+      simularCaso3();
+    }
+  };
 
   const handleMarkerPress = (punto) => {
     setPuntoSeleccionado(punto);
     setModalVisible(true);
   };
 
-  const handleGracias = () => {
-    if (puntoSeleccionado) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
-        'Gracias por tu confirmación',
-        'Tu reporte ayuda a mantener segura a la comunidad'
-      );
-      setModalVisible(false);
-    }
-  };
-
-  const simularAcercamiento = (punto) => {
-    setSimulandoAcercamiento(true);
-    
-    // Vibrar y mostrar alerta
-    Vibration.vibrate([0, 500, 200, 500]);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    
-    setTimeout(() => {
-      Alert.alert(
-        '⚠️ ALERTA DE ZONA PELIGROSA',
-        `Estás a 20 metros de un punto rojo:\n\n${punto.descripcion}\n\nReportado el ${punto.fecha}`,
-        [
-          {
-            text: 'Ver detalles',
-            onPress: () => {
-              setPuntoSeleccionado(punto);
-              setModalVisible(true);
-              setSimulandoAcercamiento(false);
-            },
-          },
-          {
-            text: 'Entendido',
-            onPress: () => setSimulandoAcercamiento(false),
-          },
-        ]
-      );
-    }, 1000);
-  };
-
-  const iniciarCreacionPunto = () => {
-    setCreandoPunto(true);
+  const guardarNuevoPunto = (punto) => {
     Alert.alert(
-      'Crear punto rojo',
-      'Mantén pulsado en el mapa para seleccionar la ubicación'
+      '✅ Punto guardado',
+      'Tu reporte ha sido publicado exitosamente. Gracias por ayudar a la comunidad.',
+      [{ text: 'OK', onPress: () => setModalMarcar(false) }]
     );
-  };
-
-  const handleMapLongPress = (event) => {
-    if (creandoPunto) {
-      setNuevoPunto({
-        ...nuevoPunto,
-        coordinate: event.nativeEvent.coordinate,
-      });
-      Alert.alert('Ubicación seleccionada', '¿Deseas agregar descripción y foto?', [
-        {
-          text: 'Continuar',
-          onPress: () => {
-            // Aquí iría la lógica para agregar foto y descripción
-            Alert.alert(
-              'Punto creado',
-              'El punto rojo ha sido agregado al mapa (simulación)',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    setCreandoPunto(false);
-                    setNuevoPunto({ descripcion: '', coordinate: null });
-                  },
-                },
-              ]
-            );
-          },
-        },
-        { text: 'Cancelar', style: 'cancel' },
-      ]);
-    }
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>← Volver</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Puntos Rojos Colaborativos</Text>
-      </View>
-
-      {/* Selector de escenarios */}
-      <View style={styles.escenarioSelector}>
-        <Text style={styles.escenarioLabel}>Escenarios de demo:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <TouchableOpacity
-            style={[
-              styles.escenarioButton,
-              escenarioActual === 1 && styles.escenarioButtonActive,
-            ]}
-            onPress={() => setEscenarioActual(1)}
-          >
-            <Text
-              style={[
-                styles.escenarioButtonText,
-                escenarioActual === 1 && styles.escenarioButtonTextActive,
-              ]}
-            >
-              1️⃣ Crear punto
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.escenarioButton,
-              escenarioActual === 2 && styles.escenarioButtonActive,
-            ]}
-            onPress={() => setEscenarioActual(2)}
-          >
-            <Text
-              style={[
-                styles.escenarioButtonText,
-                escenarioActual === 2 && styles.escenarioButtonTextActive,
-              ]}
-            >
-              2️⃣ Aviso cercano
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.escenarioButton,
-              escenarioActual === 3 && styles.escenarioButtonActive,
-            ]}
-            onPress={() => setEscenarioActual(3)}
-          >
-            <Text
-              style={[
-                styles.escenarioButtonText,
-                escenarioActual === 3 && styles.escenarioButtonTextActive,
-              ]}
-            >
-              3️⃣ Otro punto
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-
       {/* Mapa */}
       <MapView
         style={styles.map}
-        initialRegion={SUCRE_COORDINATES}
-        showsUserLocation={true}
-        onLongPress={handleMapLongPress}
+        initialRegion={miUbicacion}
+        showsUserLocation={false}
       >
+        {/* Puntos rojos reportados */}
         {PUNTOS_ROJOS.map((punto) => (
-          <React.Fragment key={punto.id}>
-            <Marker
-              coordinate={punto.coordinate}
-              pinColor={COLORS.danger}
-              onPress={() => handleMarkerPress(punto)}
-            />
-            {(escenarioActual === 2 || escenarioActual === 3) && (
-              <Circle
-                center={punto.coordinate}
-                radius={20}
-                fillColor="rgba(255, 0, 0, 0.1)"
-                strokeColor={COLORS.danger}
-                strokeWidth={2}
-              />
-            )}
-          </React.Fragment>
+          <Marker
+            key={punto.id}
+            coordinate={punto.coordinate}
+            pinColor={COLORS.danger}
+            title={punto.titulo}
+            description={punto.descripcion}
+            onPress={() => handleMarkerPress(punto)}
+          />
         ))}
 
-        {nuevoPunto.coordinate && (
-          <Marker coordinate={nuevoPunto.coordinate} pinColor={COLORS.warning} />
+        {/* Mi ubicación con círculo de radar */}
+        {showRadar && (
+          <>
+            <Circle
+              center={miUbicacion}
+              radius={50}
+              fillColor="rgba(66, 133, 244, 0.2)"
+              strokeColor="rgba(66, 133, 244, 0.8)"
+              strokeWidth={2}
+            />
+            <Marker
+              coordinate={miUbicacion}
+              pinColor="#4285F4"
+              title="Tu ubicación"
+            />
+          </>
         )}
       </MapView>
 
-      {/* Controles según escenario */}
-      <View style={styles.controls}>
-        {escenarioActual === 1 && (
-          <TouchableOpacity
-            style={styles.createButton}
-            onPress={iniciarCreacionPunto}
-          >
-            <Text style={styles.createButtonText}>
-              {creandoPunto ? '✓ Selecciona ubicación en mapa' : '📍 Crear punto rojo'}
+      {/* Animación de radar sobre el mapa cuando está activa */}
+      {showRadar && (
+        <View style={styles.radarOverlay}>
+          <RadarAnimation size={60} color="#4285F4" />
+          {distancia > 0 && (
+            <Text style={styles.distanciaText}>
+              📍 {distancia}m al punto peligroso
             </Text>
-          </TouchableOpacity>
-        )}
+          )}
+        </View>
+      )}
 
-        {(escenarioActual === 2 || escenarioActual === 3) && (
-          <View>
-            <Text style={styles.controlsTitle}>
-              Simular acercamiento a punto:
-            </Text>
-            {PUNTOS_ROJOS.slice(
-              escenarioActual === 2 ? 1 : 2,
-              escenarioActual === 2 ? 2 : 3
-            ).map((punto) => (
-              <TouchableOpacity
-                key={punto.id}
-                style={styles.simularButton}
-                onPress={() => simularAcercamiento(punto)}
-              >
-                <Text style={styles.simularButtonText}>
-                  📍 {punto.descripcion.substring(0, 40)}...
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={styles.backButton}>← Volver</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>📍 Puntos Rojos</Text>
       </View>
 
-      {/* Modal de detalles */}
+      {/* Selector de casos */}
+      <View style={styles.casosContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {casos.map((caso, index) => (
+           <TouchableOpacity
+              key={caso.id}
+              style={[
+                styles.casoCard,
+                casoActual === index && styles.casoCardActive,
+              ]}
+              onPress={() => setCasoActual(index)}
+            >
+              <Text style={[
+                styles.casoNumero,
+                casoActual === index && styles.casoNumeroActive,
+              ]}>
+                {caso.id}
+              </Text>
+              <Text style={[
+                styles.casoTitulo,
+                casoActual === index && styles.casoTituloActive,
+              ]}>
+                {caso.titulo.split(':')[1]?.trim() || caso.titulo}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Botón de acción */}
+      <View style={styles.buttonContainer}>
+        <Text style={styles.casoDescripcion}>{casoActivo.descripcion}</Text>
+        <TouchableOpacity
+          style={[styles.actionButton, simulando && styles.actionButtonDisabled]}
+          onPress={iniciarSimulacion}
+          disabled={simulando}
+        >
+          <Text style={styles.actionButtonText}>
+            {casoActivo.tipoSimulacion === 'MARCAR' ? '📍 Marcar Punto' : '▶️ Iniciar Simulación'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Modal de información de punto */}
       <Modal
+        visible={modalVisible}
         animationType="slide"
         transparent={true}
-        visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>⚠️ Zona Peligrosa</Text>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.modalCloseText}>✕</Text>
+            </TouchableOpacity>
 
             {puntoSeleccionado && (
               <>
+                <Text style={styles.modalTitle}>⚠️ Zona Peligrosa</Text>
+                <Text style={styles.modalSubtitle}>{puntoSeleccionado.titulo}</Text>
+                
                 <Image
                   source={puntoSeleccionado.foto}
-                  style={styles.evidenciaImage}
+                  style={styles.modalImage}
                   resizeMode="cover"
                 />
 
@@ -270,32 +325,38 @@ export default function PuntosRojosScreen({ navigation }) {
                   {puntoSeleccionado.descripcion}
                 </Text>
 
-                <Text style={styles.modalFecha}>
-                  Reportado: {puntoSeleccionado.fecha}
-                </Text>
-
-                <Text style={styles.modalGracias}>
-                  👍 {puntoSeleccionado.gracias} personas agradecieron esta alerta
-                </Text>
+                <View style={styles.modalInfo}>
+                  <Text style={styles.modalInfoText}>
+                    📅 Reportado: {puntoSeleccionado.fecha}
+                  </Text>
+                  <Text style={styles.modalInfoText}>
+                    💜 {puntoSeleccionado.gracias} personas agradecieron
+                  </Text>
+                </View>
 
                 <TouchableOpacity
-                  style={styles.graciasButton}
-                  onPress={handleGracias}
+                  style={styles.modalGraciasButton}
+                  onPress={() => {
+                    Alert.alert('Gracias', 'Tu confirmación ayuda a la comunidad');
+                    setModalVisible(false);
+                  }}
                 >
-                  <Text style={styles.graciasButtonText}>👍 Gracias</Text>
+                  <Text style={styles.modalGraciasButtonText}>
+                    💜 Agradecer este reporte
+                  </Text>
                 </TouchableOpacity>
               </>
             )}
-
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.closeButtonText}>Cerrar</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
+      {/* Modal para marcar punto */}
+      <MarcarPuntoModal
+        visible={modalMarcar}
+        onClose={() => setModalMarcar(false)}
+        onSave={guardarNuevoPunto}
+      />
     </View>
   );
 }
@@ -303,159 +364,180 @@ export default function PuntosRojosScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+  },
+  map: {
+    flex: 1,
+  },
+  radarOverlay: {
+    position: 'absolute',
+    top: '40%',
+    alignSelf: 'center',
+    alignItems: 'center',
+  },
+  distanciaText: {
+    marginTop: 10,
+    backgroundColor: 'rgba(66, 133, 244, 0.9)',
+    color: 'white',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   header: {
-    backgroundColor: COLORS.danger,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.primary,
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
   },
   backButton: {
+    color: 'white',
+    fontSize: 16,
     marginBottom: 5,
   },
-  backButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-  },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: COLORS.white,
+    color: 'white',
   },
-  escenarioSelector: {
-    backgroundColor: '#fff3e0',
-    padding: 12,
+  casosContainer: {
+    position: 'absolute',
+    top: 130,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 10,
   },
-  escenarioLabel: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: COLORS.black,
-    marginBottom: 8,
+  casoCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 5,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 15,
+    minWidth: 150,
+    alignItems: 'center',
+    elevation: 3,
   },
-  escenarioButton: {
-    backgroundColor: COLORS.white,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 2,
-    borderColor: COLORS.neutral,
-  },
-  escenarioButtonActive: {
+  casoCardActive: {
     backgroundColor: COLORS.danger,
-    borderColor: COLORS.danger,
   },
-  escenarioButtonText: {
-    color: COLORS.black,
-    fontSize: 13,
+  casoNumero: {
+    fontSize: 20,
     fontWeight: 'bold',
+    color: COLORS.danger,
   },
-  escenarioButtonTextActive: {
-    color: COLORS.white,
+  casoNumeroActive: {
+    color: 'white',
   },
-  map: {
-    flex: 1,
+  casoTitulo: {
+    fontSize: 12,
+    color: COLORS.primary,
+    textAlign: 'center',
+    marginTop: 5,
   },
-  controls: {
-    backgroundColor: COLORS.white,
-    padding: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+  casoTituloActive: {
+    color: 'white',
   },
-  createButton: {
+  buttonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    elevation: 10,
+  },
+  casoDescripcion: {
+    fontSize: 14,
+    color: COLORS.neutral,
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  actionButton: {
     backgroundColor: COLORS.danger,
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderRadius: 25,
     alignItems: 'center',
+    elevation: 5,
   },
-  createButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: 'bold',
+  actionButtonDisabled: {
+    backgroundColor: COLORS.neutral,
   },
-  controlsTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: COLORS.black,
-    marginBottom: 10,
-  },
-  simularButton: {
-    backgroundColor: COLORS.warning,
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    marginBottom: 8,
-  },
-  simularButtonText: {
-    color: COLORS.white,
-    fontSize: 14,
+  actionButtonText: {
+    color: 'white',
+    fontSize: 18,
     fontWeight: 'bold',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   modalContent: {
-    backgroundColor: COLORS.white,
+    backgroundColor: 'white',
     borderRadius: 20,
-    padding: 25,
-    width: '85%',
+    padding: 20,
+    width: '100%',
     maxHeight: '80%',
+  },
+  modalCloseButton: {
+    alignSelf: 'flex-end',
+  },
+  modalCloseText: {
+    fontSize: 28,
+    color: COLORS.neutral,
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.danger,
-    marginBottom: 15,
     textAlign: 'center',
+    marginBottom: 5,
   },
-  evidenciaImage: {
+  modalSubtitle: {
+    fontSize: 16,
+    color: COLORS.primary,
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  modalImage: {
     width: '100%',
     height: 200,
-    borderRadius: 10,
+    borderRadius: 15,
     marginBottom: 15,
-    backgroundColor: '#f0f0f0',
   },
   modalDescripcion: {
-    fontSize: 16,
-    color: COLORS.black,
-    marginBottom: 12,
-    lineHeight: 22,
-  },
-  modalFecha: {
-    fontSize: 13,
-    color: COLORS.neutral,
-    marginBottom: 8,
-  },
-  modalGracias: {
-    fontSize: 14,
+    fontSize: 15,
     color: COLORS.primary,
-    marginBottom: 20,
-    fontWeight: 'bold',
+    lineHeight: 22,
+    marginBottom: 15,
   },
-  graciasButton: {
-    backgroundColor: COLORS.success,
-    paddingVertical: 12,
+  modalInfo: {
+    backgroundColor: '#f5f5f5',
+    padding: 15,
     borderRadius: 10,
+    marginBottom: 15,
+  },
+  modalInfoText: {
+    fontSize: 14,
+    color: COLORS.neutral,
+    marginVertical: 3,
+  },
+  modalGraciasButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    borderRadius: 25,
     alignItems: 'center',
-    marginBottom: 10,
   },
-  graciasButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  closeButton: {
-    backgroundColor: COLORS.neutral,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: COLORS.white,
+  modalGraciasButtonText: {
+    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },

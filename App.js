@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import { initAWS } from './src/services/awsService';
+import { UserProvider } from './src/context/UserContext';
 
 // Pantallas
 import PermissionsScreen from './src/screens/PermissionsScreen';
@@ -12,6 +13,7 @@ import CameraIDScreen from './src/screens/CameraIDScreen';
 import RegisterFormScreen from './src/screens/RegisterFormScreen';
 import FaceVerificationScreen from './src/screens/FaceVerificationScreen';
 import HomeMapScreen from './src/screens/HomeMapScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 import PuntosRojosScreen from './src/screens/PuntosRojosScreen';
 import PanicoScreen from './src/screens/PanicoScreen';
 import TrayectoSeguroScreen from './src/screens/TrayectoSeguroScreen';
@@ -26,7 +28,7 @@ export default function App() {
   }, []);
 
   return (
-    <>
+    <UserProvider>
       <StatusBar style="light" />
       <NavigationContainer>
         <Stack.Navigator
@@ -42,12 +44,13 @@ export default function App() {
           <Stack.Screen name="RegisterForm" component={RegisterFormScreen} />
           <Stack.Screen name="FaceVerification" component={FaceVerificationScreen} />
           <Stack.Screen name="HomeMap" component={HomeMapScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="DemoMenu" component={DemoMenuScreen} />
           <Stack.Screen name="PuntosRojos" component={PuntosRojosScreen} />
           <Stack.Screen name="Panico" component={PanicoScreen} />
           <Stack.Screen name="TrayectoSeguro" component={TrayectoSeguroScreen} />
         </Stack.Navigator>
       </NavigationContainer>
-    </>
+    </UserProvider>
   );
 }

@@ -1,12 +1,15 @@
-// Datos simulados para la app
+// Datos simulados para la app - COORDENADAS REALES DE SUCRE, BOLIVIA
+
+// PUNTOS ROJOS - 3 casos específicos
 export const PUNTOS_ROJOS = [
   {
     id: 1,
     coordinate: {
-      latitude: -19.048,
-      longitude: -65.260,
+      latitude: -19.04790,
+      longitude: -65.26180,
     },
-    descripcion: 'Grupo de hombres acosando en la esquina',
+    titulo: 'Alrededores Mercado Central',
+    descripcion: 'Calles Ravelo y Junín - Zona con reportes de acoso y robos',
     foto: require('../../assets/puntos_rojos/rojo1.jpg'),
     fecha: '2026-03-07',
     gracias: 15,
@@ -14,10 +17,11 @@ export const PUNTOS_ROJOS = [
   {
     id: 2,
     coordinate: {
-      latitude: -19.050,
-      longitude: -65.258,
+      latitude: -19.04550,
+      longitude: -65.26280,
     },
-    descripcion: 'Calle muy oscura sin iluminación, reportes de acoso',
+    titulo: 'Calle menos iluminada',
+    descripcion: 'Entre centro y Parque Bolívar - Acoso frecuente, poca iluminación',
     foto: require('../../assets/puntos_rojos/rojo2.jpg'),
     fecha: '2026-03-06',
     gracias: 23,
@@ -25,9 +29,10 @@ export const PUNTOS_ROJOS = [
   {
     id: 3,
     coordinate: {
-      latitude: -19.045,
-      longitude: -65.262,
+      latitude: -19.04787,
+      longitude: -65.25965,
     },
+    titulo: 'Calle German Busch - Gasolinera',
     descripcion: 'Zona peligrosa, robos frecuentes a mujeres',
     foto: require('../../assets/puntos_rojos/rojo3.jpg'),
     fecha: '2026-03-05',
@@ -35,99 +40,112 @@ export const PUNTOS_ROJOS = [
   },
 ];
 
+// INCIDENTES DE PÁNICO - 3 simulaciones
 export const INCIDENTES_PANICO = [
   {
     id: 1,
-    nombre: 'Incidente Calle Loa',
+    nombre: 'Caso 1: Yo presiono pánico',
+    tipo: 'YO_PANICO',
     coordinate: {
-      latitude: -19.048,
-      longitude: -65.260,
+      latitude: -19.04787,
+      longitude: -65.25965,
     },
+    // Ruta corta alrededor de la plaza (±0.0002)
     ruta: [
-      { latitude: -19.048, longitude: -65.260 },
-      { latitude: -19.0482, longitude: -65.2605 },
-      { latitude: -19.0485, longitude: -65.2610 },
-      { latitude: -19.0488, longitude: -65.2615 },
+      { latitude: -19.04787, longitude: -65.25965 },
+      { latitude: -19.04807, longitude: -65.25975 },
+      { latitude: -19.04827, longitude: -65.25985 },
+      { latitude: -19.04847, longitude: -65.25995 },
+      { latitude: -19.04867, longitude: -65.26005 },
+      { latitude: -19.04887, longitude: -65.25995 },
+      { latitude: -19.04907, longitude: -65.25985 },
+      { latitude: -19.04927, longitude: -65.25975 },
     ],
-    // video: require('../../assets/panico/panico1.mp4'),
-    // audio: require('../../assets/panico/panico1_audio.mp3'),
+    descripcion: 'Presioné el botón de pánico y me estoy moviendo dejando rastros',
   },
   {
     id: 2,
-    nombre: 'Incidente Avenida Venezuela',
+    nombre: 'Caso 2: Veo el pánico de otra mujer',
+    tipo: 'VER_PANICO',
     coordinate: {
-      latitude: -19.044,
-      longitude: -65.257,
+      latitude: -19.04550,
+      longitude: -65.26280,
     },
     ruta: [
-      { latitude: -19.044, longitude: -65.257 },
-      { latitude: -19.0443, longitude: -65.2575 },
-      { latitude: -19.0446, longitude: -65.2580 },
-      { latitude: -19.0449, longitude: -65.2585 },
+      { latitude: -19.04550, longitude: -65.26280 },
+      { latitude: -19.04560, longitude: -65.26290 },
+      { latitude: -19.04570, longitude: -65.26300 },
+      { latitude: -19.04580, longitude: -65.26310 },
+      { latitude: -19.04590, longitude: -65.26320 },
     ],
-    // video: require('../../assets/panico/panico1.mp4'),
-    // audio: require('../../assets/panico/panico2_audio.mp3'),
+    descripcion: 'Otra mujer presionó pánico y puedo ver su rastro',
   },
   {
     id: 3,
-    nombre: 'Incidente Plaza 25 de Mayo',
+    nombre: 'Caso 3: Yo presiono pánico (segundo caso)',
+    tipo: 'YO_PANICO',
     coordinate: {
-      latitude: -19.042,
-      longitude: -65.255,
+      latitude: -19.04787,
+      longitude: -65.25965,
     },
     ruta: [
-      { latitude: -19.042, longitude: -65.255 },
-      { latitude: -19.0423, longitude: -65.2555 },
-      { latitude: -19.0426, longitude: -65.2560 },
-      { latitude: -19.0429, longitude: -65.2565 },
+      { latitude: -19.04787, longitude: -65.25965 },
+      { latitude: -19.04797, longitude: -65.25975 },
+      { latitude: -19.04817, longitude: -65.25985 },
+      { latitude: -19.04837, longitude: -65.25995 },
+      { latitude: -19.04857, longitude: -65.26005 },
+      { latitude: -19.04877, longitude: -65.26015 },
     ],
-    // video: require('../../assets/panico/panico1.mp4'),
-    // audio: require('../../assets/panico/panico1_audio.mp3'),
+    descripcion: 'Presioné el botón de pánico y estoy en movimiento',
   },
 ];
 
+// RUTAS SEGURAS - 3 trayectos
 export const RUTAS_SEGURAS = [
   {
     id: 1,
-    nombre: 'Casa → USFX',
+    nombre: 'Ruta 1: Casa → USFX',
     inicio: {
-      latitude: -19.044,
-      longitude: -65.257,
+      latitude: -19.04580,
+      longitude: -65.26550,
     },
     fin: {
-      latitude: -19.042,
-      longitude: -65.255,
+      latitude: -19.04720,
+      longitude: -65.25980,
     },
     tiempoMinutos: 30,
     tiempoDemo: 30, // segundos para demo
+    estado: 'COMPLETO', // Siguió todo bien
   },
   {
     id: 2,
-    nombre: 'Trabajo → Casa',
+    nombre: 'Ruta 2: Trabajo → Casa',
     inicio: {
-      latitude: -19.046,
-      longitude: -65.259,
+      latitude: -19.04750,
+      longitude: -65.25940,
     },
     fin: {
-      latitude: -19.044,
-      longitude: -65.257,
+      latitude: -19.04580,
+      longitude: -65.26550,
     },
     tiempoMinutos: 25,
     tiempoDemo: 25,
+    estado: 'DESVIO_LLEGO', // Se desvió un poco pero llegó
   },
   {
     id: 3,
-    nombre: 'Fiesta → Casa',
+    nombre: 'Ruta 3: Fiesta → Casa',
     inicio: {
-      latitude: -19.050,
-      longitude: -65.262,
+      latitude: -19.04350,
+      longitude: -65.25900,
     },
     fin: {
-      latitude: -19.044,
-      longitude: -65.257,
+      latitude: -19.04580,
+      longitude: -65.26550,
     },
     tiempoMinutos: 35,
     tiempoDemo: 35,
+    estado: 'DESVIO_QUEDO', // Se desvió y se quedó ahí
   },
 ];
 

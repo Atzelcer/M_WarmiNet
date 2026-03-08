@@ -1,339 +1,347 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Alert,
-  Vibration,
+  Animated,
+  ScrollView,
   Modal,
 } from 'react-native';
 import MapView, { Marker, Polyline } from '../components/MapViewWeb';
-// import { Video } from 'expo-av';
-// import { Audio } from 'expo-av';
-import * as Haptics from 'expo-haptics';
 import { COLORS, SUCRE_COORDINATES } from '../constants/colors';
-import { INCIDENTES_PANICO, USUARIOS_DEMO } from '../data/mockData';
-import { sendSNSNotification } from '../services/awsService';
+import { INCIDENTES_PANICO } from '../data/mockData';
+import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
 
 export default function PanicoScreen({ navigation }) {
-  const [incidenteActual, setIncidenteActual] = useState(0);
-  const [panicoActivado, setPanicoActivado] = useState(false);
-  const [presionando, setPresionando] = useState(false);
-  const [tiempoPresion, setTiempoPresion] = useState(0);
+  const [casoActual, setCasoActual] = useState(0);
+  const [simulando, setSimulando] = useState(false);
+  const [puntosNegros, setPuntosNegros] = useState([]);
+  const [posicionActual, setPosicionActual] = useState(null);
+  const [modalAlerta, setModalAlerta] = useState(false);
   const [grabando, setGrabando] = useState(false);
-  const [confirmaciones, setConfirmaciones] = useState(0);
-  const [alertaPolicia, setAlertaPolicia] = useState(false);
-  const [modalEvidencias, setModalEvidencias] = useState(false);
+  const pulseAnim = useState(new Animated.Value(1))[0];
 
-  const timerRef = useRef(null);
+  const casos = [
+    {
+      id: 1,
+      titulo: 'Caso 1: Yo presiono pánico',
+      descripcion: 'Presionas el botón de pánico y dejas rastro de puntos negros',
+      incidente: INCIDENTES_PANICO[0],
+    },
+    {
+      id: 2,
+      titulo: 'Caso 2: Veo pánico de otra mujer',
+      descripcion: 'Aparece alerta de otra mujer que presionó pánico',
+      incidente: INCIDENTES_PANICO[1],
+    },
+    {
+      id: 3,
+      titulo: 'Caso 3: Yo presiono pánico (ruta 2)',
+      descripcion: 'Segunda simulación de pánico con rastro',
+      incidente: INCIDENTES_PANICO[2],
+    },
+  ];
 
-  const incidente = INCIDENTES_PANICO[incidenteActual];
+  const casoActivo = casos[casoActual];
 
   useEffect(() => {
-    if (presionando) {
-      timerRef.current = setInterval(() => {
-        setTiempoPresion((prev) => {
-          if (prev >= 3) {
-            clearInterval(timerRef.current);
-            activarPanico();
-            return 3;
-          }
-          return prev + 0.1;
-        });
-      }, 100);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      if (tiempoPresion > 0 && tiempoPresion < 3) {
-        setTiempoPresion(0);
-      }
+    // Animación de pulso para el botón de pánico
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.2,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  const reproducirAlarma = async () => {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: 'https://www.soundjay.com/misc/sounds/emergency-alarm-01.mp3' },
+        { shouldPlay: true, isLooping: true }
+      );
+      
+      // Detener después de 5 segundos
+      setTimeout(() => {
+        sound.stopAsync();
+        sound.unloadAsync();
+      }, 5000);
+    } catch (error) {
+      console.log('Error reproduciendo alarma:', error);
     }
+  };
 
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [presionando]);
-
-  const activarPanico = () => {
-    setPresionando(false);
-    setPanicoActivado(true);
+  const simularCaso1 = () => {
+    setSimulando(true);
     setGrabando(true);
+    setPuntosNegros([]);
+    
+    const ruta = INCIDENTES_PANICO[0].ruta;
+    const inicio = ruta[0];
+    setPosicionActual(inicio);
 
-    // Vibración intensa
-    Vibration.vibrate([0, 1000, 500, 1000]);
+    reproducirAlarma();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
     Alert.alert(
       '🚨 PÁNICO ACTIVADO',
-      'Grabando video y audio. Notificando a mujeres cercanas.',
-      [{ text: 'OK' }]
+      'Tu alerta ha sido enviada a tus contactos de confianza.\n\nCámara y micrófono activados.\nDejando rastro de tu ubicación...',
+      [{ text: 'Entendido', style: 'destructive' }]
     );
 
-    // Simular grabación de 30 segundos
-    setTimeout(() => {
-      setGrabando(false);
-      Alert.alert('📹 Evidencias capturadas', 'Video y audio guardados');
-    }, 5000);
+    // Simular movimiento dejando puntos negros
+    let paso = 0;
+    const intervalo = setInterval(() => {
+      if (paso < ruta.length) {
+        const punto = ruta[paso];
+        setPosicionActual(punto);
+        setPuntosNegros((prev) => [...prev, punto]);
+        paso++;
+      } else {
+        clearInterval(intervalo);
+        setSimulando(false);
+        setGrabando(false);
+        Alert.alert(
+          '✅ Simulación completada',
+          'Has dejado un rastro de puntos negros. Tus contactos pueden seguir tu ubicación.',
+          [{ text: 'OK' }]
+        );
+      }
+    }, 800);
   };
 
-  const simularConfirmacion = () => {
-    if (confirmaciones < 2) {
-      const nuevasConfirmaciones = confirmaciones + 1;
-      setConfirmaciones(nuevasConfirmaciones);
-      
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      Alert.alert(
-        '✅ Confirmación recibida',
-        `${nuevasConfirmaciones} mujer(es) confirmaron que van en camino`,
-        [{ text: 'OK' }]
-      );
+  const simularCaso2 = () => {
+    // Mostrar alerta de otra mujer
+    const ruta = INCIDENTES_PANICO[1].ruta;
+    setPuntosNegros(ruta);
+    setPosicionActual(ruta[0]);
 
-      if (nuevasConfirmaciones >= 2) {
-        setTimeout(() => {
-          llamarPolicia();
-        }, 2000);
+    setModalAlerta(true);
+  };
+
+  const simularCaso3 = () => {
+    setSimulando(true);
+    setGrabando(true);
+    setPuntosNegros([]);
+    
+    const ruta = INCIDENTES_PANICO[2].ruta;
+    const inicio = ruta[0];
+    setPosicionActual(inicio);
+
+    reproducirAlarma();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+
+    Alert.alert(
+      '🚨 PÁNICO ACTIVADO',
+      'Tu alerta ha sido enviada.\n\nCámara y micrófono activados.\nGrabando evidencia...',
+      [{ text: 'Entendido', style: 'destructive' }]
+    );
+
+    let paso = 0;
+    const intervalo = setInterval(() => {
+      if (paso < ruta.length) {
+        const punto = ruta[paso];
+        setPosicionActual(punto);
+        setPuntosNegros((prev) => [...prev, punto]);
+        paso++;
+      } else {
+        clearInterval(intervalo);
+        setSimulando(false);
+        setGrabando(false);
+        Alert.alert(
+          '✅ Simulación completada',
+          'Rastro completo registrado con evidencia',
+          [{ text: 'OK' }]
+        );
       }
+    }, 700);
+  };
+
+  const iniciarSimulacion = () => {
+    setPuntosNegros([]);
+    setPosicionActual(null);
+
+    if (casoActual === 0) {
+      simularCaso1();
+    } else if (casoActual === 1) {
+      simularCaso2();
+    } else if (casoActual === 2) {
+      simularCaso3();
     }
   };
 
-  const llamarPolicia = () => {
-    setAlertaPolicia(true);
-    
-    Vibration.vibrate([0, 500, 200, 500, 200, 500]);
-    
+  const verMasInfo = () => {
+    setModalAlerta(false);
     Alert.alert(
-      '🚔 ¡LLAMANDO A LA POLICÍA!',
-      'Tu ubicación y evidencias están siendo enviadas a las autoridades.\n\nTambién se notificará a tu mamá.',
+      '💜 Mujer en peligro',
+      'Una mujer cerca de ti presionó el botón de pánico.\n\nUbicación: Calle menos iluminada\nDistancia: ~500 metros\n\n¿Deseas ayudar?',
       [
-        {
-          text: 'Ver detalles',
-          onPress: () => mostrarDetallesAlerta(),
-        },
+        { text: 'Llamar a la policía', onPress: () => Alert.alert('Llamando...', '☎️ 110 - Policía') },
+        { text: 'Ver rastro en mapa', onPress: () => Alert.alert('Rastro activado', 'Puedes seguir su ubicación') },
+        { text: 'Cerrar', style: 'cancel' },
       ]
     );
-
-    // Simular llamadas con SNS
-    setTimeout(() => {
-      sendSNSNotification('110', 'Emergencia WarmiNet - Mujer en peligro');
-      sendSNSNotification(
-        USUARIOS_DEMO.mujer.personasConfianza[0].celular,
-        'ALERTA: Tu hija activó el botón de pánico'
-      );
-    }, 1000);
-  };
-
-  const mostrarDetallesAlerta = () => {
-    Alert.alert(
-      '🚨 Alerta enviada a:',
-      `📞 Policía: 110\n` +
-        `👤 ${USUARIOS_DEMO.mujer.personasConfianza[0].nombre} (${USUARIOS_DEMO.mujer.personasConfianza[0].relacion}): ${USUARIOS_DEMO.mujer.personasConfianza[0].celular}\n\n` +
-        `📍 Ubicación: ${incidente.nombre}\n` +
-        `📹 Evidencias: Video + Audio`,
-      [{ text: 'OK' }]
-    );
-  };
-
-  const resetearDemo = () => {
-    setPanicoActivado(false);
-    setPresionando(false);
-    setTiempoPresion(0);
-    setGrabando(false);
-    setConfirmaciones(0);
-    setAlertaPolicia(false);
-  };
-
-  const cambiarIncidente = (index) => {
-    resetearDemo();
-    setIncidenteActual(index);
   };
 
   return (
     <View style={styles.container}>
+      {/* Mapa */}
+      <MapView
+        style={styles.map}
+        initialRegion={SUCRE_COORDINATES}
+        showsUserLocation={false}
+      >
+        {/* Línea de rastro conectando puntos negros */}
+        {puntosNegros.length > 1 && (
+          <Polyline
+            coordinates={puntosNegros}
+            strokeColor="#000000"
+            strokeWidth={4}
+          />
+        )}
+
+        {/* Puntos negros del rastro */}
+        {puntosNegros.map((punto, index) => (
+          <Marker
+            key={`punto-${index}`}
+            coordinate={punto}
+            pinColor="#000000"
+            title={`Punto ${index + 1}`}
+            description={`Registrado hace ${index * 5} segundos`}
+          />
+        ))}
+
+        {/* Posición actual (último punto) */}
+        {posicionActual && (
+          <Marker
+            coordinate={posicionActual}
+            pinColor={grabando ? "#FF0000" : "#000000"}
+            title={grabando ? "🚨 EN PÁNICO - Grabando" : "Última posición"}
+          />
+        )}
+      </MapView>
+
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>← Volver</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={styles.backButton}>← Volver</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Botón Pánico 3 Segundos</Text>
+        <Text style={styles.headerTitle}>🚨 Botón de Pánico</Text>
       </View>
 
-      {/* Selector de incidentes */}
-      <View style={styles.incidenteSelector}>
-        <Text style={styles.incidenteLabel}>Incidentes de demo:</Text>
+      {/* Indicador de grabación */}
+      {grabando && (
+        <View style={styles.grabandoIndicador}>
+          <View style={styles.grabandoDot} />
+          <Text style={styles.grabandoText}>🔴 Grabando evidencia...</Text>
+        </View>
+      )}
+
+      {/* Selector de casos */}
+      <View style={styles.casosContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {INCIDENTES_PANICO.map((inc, index) => (
+          {casos.map((caso, index) => (
             <TouchableOpacity
-              key={inc.id}
+              key={caso.id}
               style={[
-                styles.incidenteButton,
-                incidenteActual === index && styles.incidenteButtonActive,
+                styles.casoCard,
+                casoActual === index && styles.casoCardActive,
               ]}
-              onPress={() => cambiarIncidente(index)}
+              onPress={() => setCasoActual(index)}
             >
-              <Text
-                style={[
-                  styles.incidenteButtonText,
-                  incidenteActual === index && styles.incidenteButtonTextActive,
-                ]}
-              >
-                {index + 1}️⃣ {inc.nombre}
+              <Text style={[
+                styles.casoNumero,
+                casoActual === index && styles.casoNumeroActive,
+              ]}>
+                {caso.id}
+              </Text>
+              <Text style={[
+                styles.casoTitulo,
+                casoActual === index && styles.casoTituloActive,
+              ]}>
+                {caso.titulo.split(':')[1]?.trim() || caso.titulo}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* Mapa con ruta */}
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          ...incidente.coordinate,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }}
-        showsUserLocation={true}
-      >
-        <Marker coordinate={incidente.coordinate} pinColor={COLORS.danger} />
+      {/* Botón de acción */}
+      <View style={styles.buttonContainer}>
+        <Text style={styles.casoDescripcion}>{casoActivo.descripcion}</Text>
         
-        {panicoActivado && (
-          <Polyline
-            coordinates={incidente.ruta}
-            strokeColor={COLORS.black}
-            strokeWidth={5}
-          />
-        )}
-
-        {panicoActivado &&
-          incidente.ruta.map((coord, index) => (
-            <Marker
-              key={index}
-              coordinate={coord}
-              pinColor={COLORS.black}
-              anchor={{ x: 0.5, y: 0.5 }}
-            >
-              <View style={styles.puntoNegro} />
-            </Marker>
-          ))}
-      </MapView>
-
-      {/* Panel de control */}
-      <View style={styles.controlPanel}>
-        {!panicoActivado ? (
-          <View style={styles.panicoButtonContainer}>
-            <Text style={styles.instruccion}>
-              Mantén presionado 3 segundos para activar
-            </Text>
+        {casoActual === 0 || casoActual === 2 ? (
+          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
             <TouchableOpacity
-              style={[
-                styles.panicoButton,
-                presionando && styles.panicoButtonPressing,
-              ]}
-              onPressIn={() => setPresionando(true)}
-              onPressOut={() => setPresionando(false)}
-              activeOpacity={1}
+              style={[styles.panicoButton, simulando && styles.panicoButtonDisabled]}
+              onPress={iniciarSimulacion}
+              disabled={simulando}
             >
               <Text style={styles.panicoButtonText}>
-                {presionando ? '⏱️ ' + tiempoPresion.toFixed(1) + 's' : '🚨 PÁNICO'}
+                {simulando ? '🚨 EN PÁNICO...' : '🚨 PRESIONAR PÁNICO'}
               </Text>
             </TouchableOpacity>
-            {presionando && (
-              <View style={styles.progressBar}>
-                <View
-                  style={[styles.progressFill, { width: `${(tiempoPresion / 3) * 100}%` }]}
-                />
-              </View>
-            )}
-          </View>
+          </Animated.View>
         ) : (
-          <View style={styles.estadoPanico}>
-            <Text style={styles.estadoTitle}>🚨 PÁNICO ACTIVADO</Text>
-            
-            {grabando && (
-              <View style={styles.grabandoContainer}>
-                <Text style={styles.grabandoText}>📹 Grabando evidencias...</Text>
-                <View style={styles.recordingDot} />
-              </View>
-            )}
-
-            <View style={styles.confirmacionesContainer}>
-              <Text style={styles.confirmacionesText}>
-                Confirmaciones: {confirmaciones}/2
-              </Text>
-              <TouchableOpacity
-                style={styles.confirmarButton}
-                onPress={simularConfirmacion}
-                disabled={confirmaciones >= 2}
-              >
-                <Text style={styles.confirmarButtonText}>
-                  {confirmaciones >= 2 ? '✅ Confirmado' : '👍 Confirmar ayuda'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {alertaPolicia && (
-              <View style={styles.alertaPolicia}>
-                <Text style={styles.alertaPoliciaText}>
-                  🚔 ¡LLAMANDO A LA POLICÍA!
-                </Text>
-              </View>
-            )}
-
-            <TouchableOpacity
-              style={styles.evidenciasButton}
-              onPress={() => setModalEvidencias(true)}
-            >
-              <Text style={styles.evidenciasButtonText}>📹 Ver evidencias</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.resetButton} onPress={resetearDemo}>
-              <Text style={styles.resetButtonText}>🔄 Resetear demo</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={iniciarSimulacion}
+          >
+            <Text style={styles.actionButtonText}>
+              👀 Ver alerta de otra mujer
+            </Text>
+          </TouchableOpacity>
         )}
+
+        <Text style={styles.warningText}>
+          * En caso real: se activan cámara, micrófono y se envía a contactos
+        </Text>
       </View>
 
-      {/* Modal de evidencias */}
+      {/* Modal de alerta de otra mujer */}
       <Modal
-        animationType="slide"
+        visible={modalAlerta}
+        animationType="fade"
         transparent={true}
-        visible={modalEvidencias}
-        onRequestClose={() => setModalEvidencias(false)}
+        onRequestClose={() => setModalAlerta(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>📹 Evidencias capturadas</Text>
-
-            <Text style={styles.modalSubtitle}>Video del incidente:</Text>
-            <View style={styles.videoPlaceholder}>
-              <Text style={styles.videoPlaceholderText}>
-                🎥 Video simulado{'\n'}30 segundos
-              </Text>
-            </View>
-
-            <Text style={styles.modalSubtitle}>Audio grabado:</Text>
-            <View style={styles.audioPlaceholder}>
-              <Text style={styles.audioPlaceholderText}>🎵 Audio simulado</Text>
-            </View>
-
-            <Text style={styles.modalInfo}>
-              📍 Ubicación: {incidente.nombre}{'\n'}
-              ⏰ Hora: {new Date().toLocaleTimeString()}{'\n'}
-              📱 Ruta negra: {incidente.ruta.length} puntos marcados
+          <View style={styles.alertaCard}>
+            <Text style={styles.alertaIcon}>🚨</Text>
+            <Text style={styles.alertaTitulo}>¡ALERTA DE PÁNICO!</Text>
+            <Text style={styles.alertaDescripcion}>
+              Una mujer cerca de ti presionó el botón de pánico
             </Text>
+            
+            <View style={styles.alertaInfo}>
+              <Text style={styles.alertaInfoText}>📍 ~500 metros de distancia</Text>
+              <Text style={styles.alertaInfoText}>⏰ Hace 2 minutos</Text>
+              <Text style={styles.alertaInfoText}>🗺️ {INCIDENTES_PANICO[1].nombre}</Text>
+            </View>
 
             <TouchableOpacity
-              style={styles.closeModalButton}
-              onPress={() => setModalEvidencias(false)}
+              style={styles.alertaButton}
+              onPress={verMasInfo}
             >
-              <Text style={styles.closeModalButtonText}>Cerrar</Text>
+              <Text style={styles.alertaButtonText}>💜 VER Y AYUDAR</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.alertaCerrarButton}
+              onPress={() => setModalAlerta(false)}
+            >
+              <Text style={styles.alertaCerrarText}>Cerrar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -345,271 +353,204 @@ export default function PanicoScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+  },
+  map: {
+    flex: 1,
   },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     backgroundColor: COLORS.secondary2,
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
   },
   backButton: {
+    color: 'white',
+    fontSize: 16,
     marginBottom: 5,
   },
-  backButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-  },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.white,
-  },
-  incidenteSelector: {
-    backgroundColor: '#ffebee',
-    padding: 12,
-  },
-  incidenteLabel: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: COLORS.black,
-    marginBottom: 8,
-  },
-  incidenteButton: {
-    backgroundColor: COLORS.white,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 2,
-    borderColor: COLORS.neutral,
-  },
-  incidenteButtonActive: {
-    backgroundColor: COLORS.secondary2,
-    borderColor: COLORS.secondary2,
-  },
-  incidenteButtonText: {
-    color: COLORS.black,
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  incidenteButtonTextActive: {
-    color: COLORS.white,
-  },
-  map: {
-    flex: 1,
-  },
-  puntoNegro: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: COLORS.black,
-  },
-  controlPanel: {
-    backgroundColor: COLORS.white,
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  panicoButtonContainer: {
-    alignItems: 'center',
-  },
-  instruccion: {
-    fontSize: 14,
-    color: COLORS.neutral,
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  panicoButton: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: COLORS.danger,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: COLORS.danger,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-  },
-  panicoButtonPressing: {
-    backgroundColor: '#cc0000',
-    transform: [{ scale: 0.95 }],
-  },
-  panicoButtonText: {
-    color: COLORS.white,
     fontSize: 24,
     fontWeight: 'bold',
-    textAlign: 'center',
+    color: 'white',
   },
-  progressBar: {
-    width: '80%',
-    height: 6,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 3,
-    marginTop: 15,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: COLORS.danger,
-  },
-  estadoPanico: {
-    alignItems: 'center',
-  },
-  estadoTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.danger,
-    marginBottom: 15,
-  },
-  grabandoContainer: {
+  grabandoIndicador: {
+    position: 'absolute',
+    top: 120,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    backgroundColor: 'rgba(255, 0, 0, 0.9)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 25,
   },
-  grabandoText: {
-    fontSize: 16,
-    color: COLORS.black,
-    marginRight: 10,
-  },
-  recordingDot: {
+  grabandoDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: COLORS.danger,
+    backgroundColor: 'white',
+    marginRight: 10,
   },
-  confirmacionesContainer: {
-    width: '100%',
-    marginBottom: 15,
-  },
-  confirmacionesText: {
+  grabandoText: {
+    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
-    color: COLORS.black,
-    marginBottom: 10,
-    textAlign: 'center',
   },
-  confirmarButton: {
-    backgroundColor: COLORS.success,
-    paddingVertical: 12,
-    borderRadius: 10,
+  casosContainer: {
+    position: 'absolute',
+    top: 130,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 10,
+  },
+  casoCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 5,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 15,
+    minWidth: 150,
     alignItems: 'center',
+    elevation: 3,
   },
-  confirmarButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
+  casoCardActive: {
+    backgroundColor: COLORS.secondary2,
+  },
+  casoNumero: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.secondary2,
+  },
+  casoNumeroActive: {
+    color: 'white',
+  },
+  casoTitulo: {
+    fontSize: 12,
+    color: COLORS.primary,
+    textAlign: 'center',
+    marginTop: 5,
+  },
+  casoTituloActive: {
+    color: 'white',
+  },
+  buttonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    elevation: 10,
+  },
+  casoDescripcion: {
+    fontSize: 14,
+    color: COLORS.neutral,
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  panicoButton: {
+    backgroundColor: COLORS.secondary2,
+    paddingVertical: 20,
+    borderRadius: 25,
+    alignItems: 'center',
+    elevation: 8,
+    marginBottom: 10,
+  },
+  panicoButtonDisabled: {
+    backgroundColor: '#888',
+  },
+  panicoButtonText: {
+    color: 'white',
+    fontSize: 20,
     fontWeight: 'bold',
   },
-  alertaPolicia: {
-    backgroundColor: '#1565c0',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    width: '100%',
+  actionButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 25,
+    alignItems: 'center',
+    elevation: 5,
+    marginBottom: 10,
   },
-  alertaPoliciaText: {
-    color: COLORS.white,
+  actionButtonText: {
+    color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  warningText: {
+    fontSize: 11,
+    color: COLORS.neutral,
     textAlign: 'center',
-  },
-  evidenciasButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  evidenciasButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  resetButton: {
-    backgroundColor: COLORS.neutral,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-  },
-  resetButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontStyle: 'italic',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
-  modalContent: {
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: 25,
-    width: '90%',
-    maxHeight: '80%',
+  alertaCard: {
+    backgroundColor: 'white',
+    borderRadius: 25,
+    padding: 30,
+    width: '100%',
+    alignItems: 'center',
   },
-  modalTitle: {
-    fontSize: 22,
+  alertaIcon: {
+    fontSize: 80,
+    marginBottom: 15,
+  },
+  alertaTitulo: {
+    fontSize: 28,
     fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.black,
+    color: COLORS.secondary2,
     marginBottom: 10,
-    marginTop: 10,
-  },
-  videoPlaceholder: {
-    width: '100%',
-    height: 150,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  videoPlaceholderText: {
-    fontSize: 16,
-    color: COLORS.neutral,
     textAlign: 'center',
   },
-  audioPlaceholder: {
-    width: '100%',
-    height: 60,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  audioPlaceholderText: {
+  alertaDescripcion: {
     fontSize: 16,
-    color: COLORS.neutral,
-  },
-  modalInfo: {
-    fontSize: 14,
-    color: COLORS.black,
-    lineHeight: 22,
+    color: COLORS.primary,
+    textAlign: 'center',
     marginBottom: 20,
-    padding: 15,
-    backgroundColor: '#e3f2fd',
-    borderRadius: 10,
   },
-  closeModalButton: {
-    backgroundColor: COLORS.neutral,
-    paddingVertical: 14,
-    borderRadius: 10,
+  alertaInfo: {
+    backgroundColor: '#f5f5f5',
+    padding: 15,
+    borderRadius: 15,
+    width: '100%',
+    marginBottom: 20,
+  },
+  alertaInfoText: {
+    fontSize: 14,
+    color: COLORS.neutral,
+    marginVertical: 3,
+  },
+  alertaButton: {
+    backgroundColor: COLORS.secondary2,
+    paddingVertical: 16,
+    paddingHorizontal: 40,
+    borderRadius: 25,
+    marginBottom: 10,
+    width: '100%',
     alignItems: 'center',
   },
-  closeModalButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
+  alertaButtonText: {
+    color: 'white',
+    fontSize: 18,
     fontWeight: 'bold',
+  },
+  alertaCerrarButton: {
+    paddingVertical: 10,
+  },
+  alertaCerrarText: {
+    color: COLORS.neutral,
+    fontSize: 16,
   },
 });
