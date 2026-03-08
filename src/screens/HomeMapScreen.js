@@ -108,6 +108,14 @@ export default function HomeMapScreen({ navigation }) {
           <Text style={styles.actionButtonEmoji}>🛳️</Text>
           <Text style={styles.actionButtonText}>Trayecto{'\n'}Seguro</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: '#8B4789' }]}
+          onPress={() => navigation.navigate('Feed')}
+        >
+          <Text style={styles.actionButtonEmoji}>📢</Text>
+          <Text style={styles.actionButtonText}>Postear</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Botón de información */}
@@ -119,6 +127,7 @@ export default function HomeMapScreen({ navigation }) {
             '📍 Puntos rojos: zonas peligrosas reportadas\n\n' +
               '🚨 Botón pánico: emergencias 3 segundos\n\n' +
               '🛳️ Trayecto seguro: monitoreo de rutas\n\n' +
+              '📢 Postear: comparte situaciones peligrosas con la comunidad\n\n' +
               'Toca los marcadores rojos para ver detalles.'
           )
         }

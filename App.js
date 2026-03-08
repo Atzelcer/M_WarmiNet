@@ -14,6 +14,7 @@ import RegisterFormScreen from './src/screens/RegisterFormScreen';
 import FaceVerificationScreen from './src/screens/FaceVerificationScreen';
 import HomeMapScreen from './src/screens/HomeMapScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import FeedScreen from './src/screens/FeedScreen';
 import PuntosRojosScreen from './src/screens/PuntosRojosScreen';
 import PanicoScreen from './src/screens/PanicoScreen';
 import TrayectoSeguroScreen from './src/screens/TrayectoSeguroScreen';
@@ -45,6 +46,7 @@ export default function App() {
           <Stack.Screen name="FaceVerification" component={FaceVerificationScreen} />
           <Stack.Screen name="HomeMap" component={HomeMapScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="Feed" component={FeedScreen} />
           <Stack.Screen name="DemoMenu" component={DemoMenuScreen} />
           <Stack.Screen name="PuntosRojos" component={PuntosRojosScreen} />
           <Stack.Screen name="Panico" component={PanicoScreen} />
