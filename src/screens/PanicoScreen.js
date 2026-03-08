@@ -8,6 +8,8 @@ import {
   Animated,
   ScrollView,
   Modal,
+  Image,
+  Dimensions,
 } from 'react-native';
 import MapView, { Marker, Polyline } from '../components/MapViewWeb';
 import { COLORS, SUCRE_COORDINATES } from '../constants/colors';
@@ -15,13 +17,34 @@ import { INCIDENTES_PANICO } from '../data/mockData';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 
+const { width } = Dimensions.get('window');
+
+const EVIDENCIAS = {
+  caso1: {
+    imagen: require('../../assets/panico/panicoImage01.jpg'),
+    audio: require('../../assets/panico/panicoAudio01.mp3'),
+  },
+  caso2: {
+    imagen: require('../../assets/panico/panicoImage02.jpg'),
+    audio: require('../../assets/panico/panicoAudio02.mp3'),
+  },
+  caso3: {
+    imagen: require('../../assets/panico/panicoImage03.jpg'),
+    audio: require('../../assets/panico/panicoAudio03.mp3'),
+  },
+};
+
 export default function PanicoScreen({ navigation }) {
   const [casoActual, setCasoActual] = useState(0);
   const [simulando, setSimulando] = useState(false);
   const [puntosNegros, setPuntosNegros] = useState([]);
+  const [evidenciasGuardadas, setEvidenciasGuardadas] = useState([]);
   const [posicionActual, setPosicionActual] = useState(null);
   const [modalAlerta, setModalAlerta] = useState(false);
+  const [modalEvidencias, setModalEvidencias] = useState(false);
   const [grabando, setGrabando] = useState(false);
+  const [sound, setSound] = useState(null);
+  const [reproduciendo, setReproduciendo] = useState(false);
   const pulseAnim = useState(new Animated.Value(1))[0];
 
   const casos = [
@@ -63,35 +86,74 @@ export default function PanicoScreen({ navigation }) {
         }),
       ])
     ).start();
+
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
   }, []);
 
-  const reproducirAlarma = async () => {
+  const reproducirAudio = async (audioSource) => {
     try {
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: 'https://www.soundjay.com/misc/sounds/emergency-alarm-01.mp3' },
-        { shouldPlay: true, isLooping: true }
+      if (sound) {
+        await sound.unloadAsync();
+      }
+
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        audioSource,
+        { shouldPlay: true }
       );
-      
-      // Detener después de 5 segundos
-      setTimeout(() => {
-        sound.stopAsync();
-        sound.unloadAsync();
-      }, 5000);
+
+      setSound(newSound);
+      setReproduciendo(true);
+
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setReproduciendo(false);
+        }
+      });
+
+      console.log('[Pánico] Audio reproduciendo...');
     } catch (error) {
-      console.log('Error reproduciendo alarma:', error);
+      console.log('Error reproduciendo audio:', error);
+      Alert.alert('Error', 'No se pudo reproducir el audio');
     }
+  };
+
+  const detenerAudio = async () => {
+    if (sound) {
+      await sound.stopAsync();
+      setReproduciendo(false);
+    }
+  };
+
+  const guardarEvidencia = (punto, casoNumero) => {
+    const nuevaEvidencia = {
+      id: `ev_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      punto,
+      timestamp: new Date().toISOString(),
+      imagen: EVIDENCIAS[`caso${casoNumero}`].imagen,
+      audio: EVIDENCIAS[`caso${casoNumero}`].audio,
+      casoNumero,
+    };
+
+    setEvidenciasGuardadas((prev) => [...prev, nuevaEvidencia]);
+    console.log('[Pánico] Evidencia guardada:', nuevaEvidencia.id);
   };
 
   const simularCaso1 = () => {
     setSimulando(true);
     setGrabando(true);
     setPuntosNegros([]);
+    setEvidenciasGuardadas([]);
     
     const ruta = INCIDENTES_PANICO[0].ruta;
     const inicio = ruta[0];
     setPosicionActual(inicio);
 
-    reproducirAlarma();
+    // Reproducir audio de evidencia
+    reproducirAudio(EVIDENCIAS.caso1.audio);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
     Alert.alert(
@@ -100,13 +162,19 @@ export default function PanicoScreen({ navigation }) {
       [{ text: 'Entendido', style: 'destructive' }]
     );
 
-    // Simular movimiento dejando puntos negros
+    // Simular movimiento dejando puntos negros y evidencias
     let paso = 0;
     const intervalo = setInterval(() => {
       if (paso < ruta.length) {
         const punto = ruta[paso];
         setPosicionActual(punto);
         setPuntosNegros((prev) => [...prev, punto]);
+        
+        // Guardar evidencia cada 2 puntos
+        if (paso % 2 === 0) {
+          guardarEvidencia(punto, 1);
+        }
+        
         paso++;
       } else {
         clearInterval(intervalo);
@@ -114,7 +182,7 @@ export default function PanicoScreen({ navigation }) {
         setGrabando(false);
         Alert.alert(
           '✅ Simulación completada',
-          'Has dejado un rastro de puntos negros. Tus contactos pueden seguir tu ubicación.',
+          `Has dejado un rastro de puntos negros.\nEvidencias capturadas: ${Math.ceil(ruta.length / 2)}\n\nToca "Ver Evidencias" para revisar.`,
           [{ text: 'OK' }]
         );
       }
@@ -126,6 +194,16 @@ export default function PanicoScreen({ navigation }) {
     const ruta = INCIDENTES_PANICO[1].ruta;
     setPuntosNegros(ruta);
     setPosicionActual(ruta[0]);
+    setEvidenciasGuardadas([]);
+
+    // Guardar evidencias de la otra mujer
+    ruta.forEach((punto, index) => {
+      if (index % 2 === 0) {
+        setTimeout(() => {
+          guardarEvidencia(punto, 2);
+        }, index * 100);
+      }
+    });
 
     setModalAlerta(true);
   };
@@ -134,12 +212,13 @@ export default function PanicoScreen({ navigation }) {
     setSimulando(true);
     setGrabando(true);
     setPuntosNegros([]);
+    setEvidenciasGuardadas([]);
     
     const ruta = INCIDENTES_PANICO[2].ruta;
     const inicio = ruta[0];
     setPosicionActual(inicio);
 
-    reproducirAlarma();
+    reproducirAudio(EVIDENCIAS.caso3.audio);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
     Alert.alert(
@@ -154,6 +233,12 @@ export default function PanicoScreen({ navigation }) {
         const punto = ruta[paso];
         setPosicionActual(punto);
         setPuntosNegros((prev) => [...prev, punto]);
+        
+        // Guardar evidencia cada 2 puntos
+        if (paso % 2 === 0) {
+          guardarEvidencia(punto, 3);
+        }
+        
         paso++;
       } else {
         clearInterval(intervalo);
@@ -161,7 +246,7 @@ export default function PanicoScreen({ navigation }) {
         setGrabando(false);
         Alert.alert(
           '✅ Simulación completada',
-          'Rastro completo registrado con evidencia',
+          `Rastro completo registrado con evidencia.\nEvidencias capturadas: ${Math.ceil(ruta.length / 2)}\n\nToca "Ver Evidencias" para revisar.`,
           [{ text: 'OK' }]
         );
       }
@@ -307,6 +392,18 @@ export default function PanicoScreen({ navigation }) {
         <Text style={styles.warningText}>
           * En caso real: se activan cámara, micrófono y se envía a contactos
         </Text>
+
+        {/* Botón para ver evidencias */}
+        {evidenciasGuardadas.length > 0 && (
+          <TouchableOpacity
+            style={styles.evidenciasButton}
+            onPress={() => setModalEvidencias(true)}
+          >
+            <Text style={styles.evidenciasButtonText}>
+              📸 Ver Evidencias ({evidenciasGuardadas.length})
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Modal de alerta de otra mujer */}
@@ -344,6 +441,74 @@ export default function PanicoScreen({ navigation }) {
               <Text style={styles.alertaCerrarText}>Cerrar</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Evidencias */}
+      <Modal
+        visible={modalEvidencias}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setModalEvidencias(false)}
+      >
+        <View style={styles.evidenciasModal}>
+          <View style={styles.evidenciasHeader}>
+            <Text style={styles.evidenciasTitle}>
+              📸 Evidencias Capturadas ({evidenciasGuardadas.length})
+            </Text>
+            <TouchableOpacity onPress={() => setModalEvidencias(false)}>
+              <Text style={styles.cerrarModalText}>✕ Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.evidenciasList}>
+            {evidenciasGuardadas.map((evidencia, index) => (
+              <View key={evidencia.id} style={styles.evidenciaItem}>
+                <View style={styles.evidenciaHeader}>
+                  <Text style={styles.evidenciaNumero}>
+                    Evidencia #{index + 1}
+                  </Text>
+                  <Text style={styles.evidenciaTimestamp}>
+                    {new Date(evidencia.timestamp).toLocaleTimeString('es-BO')}
+                  </Text>
+                </View>
+
+                <Text style={styles.evidenciaUbicacion}>
+                  📍 Lat: {evidencia.punto.latitude.toFixed(5)}, 
+                  Lon: {evidencia.punto.longitude.toFixed(5)}
+                </Text>
+
+                {/* Imagen de evidencia */}
+                <Image 
+                  source={evidencia.imagen}
+                  style={styles.evidenciaImagen}
+                  resizeMode="cover"
+                />
+
+                {/* Controles de audio */}
+                <View style={styles.audioControls}>
+                  <TouchableOpacity
+                    style={styles.audioButton}
+                    onPress={() => reproducirAudio(evidencia.audio)}
+                    disabled={reproduciendo}
+                  >
+                    <Text style={styles.audioButtonText}>
+                      {reproduciendo ? '▶️ Reproduciendo...' : '▶️ Reproducir Audio'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {reproduciendo && (
+                    <TouchableOpacity
+                      style={styles.audioButtonStop}
+                      onPress={detenerAudio}
+                    >
+                      <Text style={styles.audioButtonText}>⏹️ Detener</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            ))}
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -552,5 +717,105 @@ const styles = StyleSheet.create({
   alertaCerrarText: {
     color: COLORS.neutral,
     fontSize: 16,
+  },
+  evidenciasButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    borderRadius:20,
+    alignItems: 'center',
+    marginTop: 10,
+    elevation: 4,
+  },
+  evidenciasButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  evidenciasModal: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  evidenciasHeader: {
+    backgroundColor: COLORS.secondary2,
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  evidenciasTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  cerrarModalText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  evidenciasList: {
+    flex: 1,
+    padding: 15,
+  },
+  evidenciaItem: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 15,
+    elevation: 3,
+  },
+  evidenciaHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  evidenciaNumero: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.secondary2,
+  },
+  evidenciaTimestamp: {
+    fontSize: 12,
+    color: COLORS.neutral,
+  },
+  evidenciaUbicacion: {
+    fontSize: 12,
+    color: COLORS.primary,
+    marginBottom: 10,
+  },
+  evidenciaImagen: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 15,
+  },
+  audioControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  audioButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    flex: 1,
+    marginRight: 5,
+    alignItems: 'center',
+  },
+  audioButtonStop: {
+    backgroundColor: COLORS.secondary2,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    flex: 1,
+    marginLeft: 5,
+    alignItems: 'center',
+  },
+  audioButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
