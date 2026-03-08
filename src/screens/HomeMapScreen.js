@@ -30,7 +30,7 @@ export default function HomeMapScreen({ navigation }) {
 
   const handleMarkerPress = (punto) => {
     Alert.alert(
-      '[PELIGRO] Zona peligrosa',
+      '⚠️ Zona peligrosa',
       punto.descripcion + '\n\n' + punto.gracias + ' personas agradecieron esta alerta',
       [
         { text: 'Cerrar', style: 'cancel' },
@@ -55,7 +55,7 @@ export default function HomeMapScreen({ navigation }) {
             key={punto.id}
             coordinate={punto.coordinate}
             pinColor={COLORS.danger}
-            title="[!] Zona peligrosa"
+            title="⚠️ Zona peligrosa"
             description={punto.descripcion}
             onPress={() => handleMarkerPress(punto)}
           />
@@ -81,7 +81,7 @@ export default function HomeMapScreen({ navigation }) {
           style={[styles.actionButton, { backgroundColor: COLORS.danger }]}
           onPress={() => navigation.navigate('PuntosRojos')}
         >
-          <Text style={styles.actionButtonEmoji}>[!]</Text>
+          <Text style={styles.actionButtonEmoji}>📍</Text>
           <Text style={styles.actionButtonText}>Puntos{'\n'}Rojos</Text>
         </TouchableOpacity>
 
@@ -89,7 +89,7 @@ export default function HomeMapScreen({ navigation }) {
           style={[styles.actionButton, { backgroundColor: COLORS.secondary2 }]}
           onPress={() => navigation.navigate('Panico')}
         >
-          <Text style={styles.actionButtonEmoji}>[SOS]</Text>
+          <Text style={styles.actionButtonEmoji}>🚨</Text>
           <Text style={styles.actionButtonText}>Botón{'\n'}Pánico</Text>
         </TouchableOpacity>
 
@@ -97,7 +97,7 @@ export default function HomeMapScreen({ navigation }) {
           style={[styles.actionButton, { backgroundColor: COLORS.secondary3 }]}
           onPress={() => navigation.navigate('TrayectoSeguro')}
         >
-          <Text style={styles.actionButtonEmoji}>[►]</Text>
+          <Text style={styles.actionButtonEmoji}>🛳️</Text>
           <Text style={styles.actionButtonText}>Trayecto{'\n'}Seguro</Text>
         </TouchableOpacity>
       </View>
@@ -108,14 +108,14 @@ export default function HomeMapScreen({ navigation }) {
         onPress={() =>
           Alert.alert(
             'WarmiNet - Mapa Principal',
-            '[!] Puntos rojos: zonas peligrosas reportadas\n\n' +
-              '[SOS] Botón pánico: emergencias 3 segundos\n\n' +
-              '[►] Trayecto seguro: monitoreo de rutas\n\n' +
+            '📍 Puntos rojos: zonas peligrosas reportadas\n\n' +
+              '🚨 Botón pánico: emergencias 3 segundos\n\n' +
+              '🛳️ Trayecto seguro: monitoreo de rutas\n\n' +
               'Toca los marcadores rojos para ver detalles.'
           )
         }
       >
-        <Text style={styles.infoButtonText}>[i]</Text>
+        <Text style={styles.infoButtonText}>ℹ️</Text>
       </TouchableOpacity>
     </View>
   );

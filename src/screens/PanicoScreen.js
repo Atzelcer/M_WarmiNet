@@ -69,7 +69,7 @@ export default function PanicoScreen({ navigation }) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
 
     Alert.alert(
-      '[PANICO] PÁNICO ACTIVADO',
+      '🚨 PÁNICO ACTIVADO',
       'Grabando video y audio. Notificando a mujeres cercanas.',
       [{ text: 'OK' }]
     );
@@ -77,7 +77,7 @@ export default function PanicoScreen({ navigation }) {
     // Simular grabación de 30 segundos
     setTimeout(() => {
       setGrabando(false);
-      Alert.alert('[EVIDENCIAS] Evidencias capturadas', 'Video y audio guardados');
+      Alert.alert('📹 Evidencias capturadas', 'Video y audio guardados');
     }, 5000);
   };
 
@@ -89,7 +89,7 @@ export default function PanicoScreen({ navigation }) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
       Alert.alert(
-        '[CONFIRMADO] Confirmación recibida',
+        '✅ Confirmación recibida',
         `${nuevasConfirmaciones} mujer(es) confirmaron que van en camino`,
         [{ text: 'OK' }]
       );
@@ -108,7 +108,7 @@ export default function PanicoScreen({ navigation }) {
     Vibration.vibrate([0, 500, 200, 500, 200, 500]);
     
     Alert.alert(
-      '[POLICIA] LLAMANDO A LA POLICÍA',
+      '🚔 ¡LLAMANDO A LA POLICÍA!',
       'Tu ubicación y evidencias están siendo enviadas a las autoridades.\n\nTambién se notificará a tu mamá.',
       [
         {
@@ -130,11 +130,11 @@ export default function PanicoScreen({ navigation }) {
 
   const mostrarDetallesAlerta = () => {
     Alert.alert(
-      '[ALERTA] Alerta enviada a:',
-      `[TEL] Policía: 110\n` +
-        `[CONTACTO] ${USUARIOS_DEMO.mujer.personasConfianza[0].nombre} (${USUARIOS_DEMO.mujer.personasConfianza[0].relacion}): ${USUARIOS_DEMO.mujer.personasConfianza[0].celular}\n\n` +
-        `[UBICACION] Ubicación: ${incidente.nombre}\n` +
-        `[EVIDENCIAS] Evidencias: Video + Audio`,
+      '🚨 Alerta enviada a:',
+      `📞 Policía: 110\n` +
+        `👤 ${USUARIOS_DEMO.mujer.personasConfianza[0].nombre} (${USUARIOS_DEMO.mujer.personasConfianza[0].relacion}): ${USUARIOS_DEMO.mujer.personasConfianza[0].celular}\n\n` +
+        `📍 Ubicación: ${incidente.nombre}\n` +
+        `📹 Evidencias: Video + Audio`,
       [{ text: 'OK' }]
     );
   };
@@ -184,7 +184,7 @@ export default function PanicoScreen({ navigation }) {
                   incidenteActual === index && styles.incidenteButtonTextActive,
                 ]}
               >
-                [{index + 1}] {inc.nombre}
+                {index + 1}️⃣ {inc.nombre}
               </Text>
             </TouchableOpacity>
           ))}

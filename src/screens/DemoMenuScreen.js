@@ -68,7 +68,7 @@ export default function DemoMenuScreen({ navigation }) {
         ))}
 
         <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>[INFO] Información de la Demo</Text>
+          <Text style={styles.infoTitle}>ℹ️ Información de la Demo</Text>
           <Text style={styles.infoText}>
             • Todas las funciones son simulaciones locales{'\n'}
             • No se requiere conexión a internet{'\n'}
@@ -83,7 +83,7 @@ export default function DemoMenuScreen({ navigation }) {
           onPress={() => navigation.navigate('CameraID')}
         >
           <Text style={styles.registerButtonText}>
-            [REGISTRO] Volver al flujo de registro completo
+            📝 Volver al flujo de registro completo
           </Text>
         </TouchableOpacity>
       </ScrollView>

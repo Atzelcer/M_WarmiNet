@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { initAWS } from './src/services/awsService';
 
 // Pantallas
+import PermissionsScreen from './src/screens/PermissionsScreen';
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import CameraIDScreen from './src/screens/CameraIDScreen';
 import RegisterFormScreen from './src/screens/RegisterFormScreen';
@@ -29,12 +30,13 @@ export default function App() {
       <StatusBar style="light" />
       <NavigationContainer>
         <Stack.Navigator
-          initialRouteName="Welcome"
+          initialRouteName="Permissions"
           screenOptions={{
             headerShown: false,
             cardStyle: { backgroundColor: '#ffffff' },
           }}
         >
+          <Stack.Screen name="Permissions" component={PermissionsScreen} />
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="CameraID" component={CameraIDScreen} />
           <Stack.Screen name="RegisterForm" component={RegisterFormScreen} />

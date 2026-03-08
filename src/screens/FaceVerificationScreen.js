@@ -45,8 +45,8 @@ export default function FaceVerificationScreen({ navigation }) {
     setTimeout(() => {
       setScanning(false);
       Alert.alert(
-        '[VERIFICADO] Rostro verificado correctamente',
-        'Bienvenida a WarmiNet',
+        '✅ Rostro verificado correctamente',
+        '¡Bienvenida a WarmiNet!',
         [
           {
             text: 'Entrar a la app',
@@ -80,7 +80,7 @@ export default function FaceVerificationScreen({ navigation }) {
         <View style={styles.cameraContainer}>
           <View style={styles.cameraPlaceholder}>
             <View style={styles.faceFrame}>
-              <Text style={styles.faceIcon}>[ROSTRO]</Text>
+              <Text style={styles.faceIcon}>👤</Text>
               {scanning && (
                 <View style={styles.scanLine}>
                   <View style={styles.scanLineBar} />
@@ -110,14 +110,14 @@ export default function FaceVerificationScreen({ navigation }) {
             disabled={!cameraReady}
           >
             <Text style={styles.scanButtonText}>
-              [INICIAR] Comenzar verificación
+              📷 Iniciar verificación
             </Text>
           </TouchableOpacity>
         )}
 
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
-            [INFO] Esta verificación asegura que eres tú quien está registrándose.
+            ℹ️ Esta verificación asegura que eres tú quien está registrándose.
             Tu rostro se usará para futuras autenticaciones de seguridad.
           </Text>
         </View>
