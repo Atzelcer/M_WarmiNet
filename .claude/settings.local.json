@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(CI=1 timeout 45 npx expo start --no-dev)",
+      "Bash(npx expo install --fix)",
+      "Bash(CI=1 npx expo start)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill /F /PID 43048)",
+      "Bash(cmd /c \"taskkill /F /PID 43048\")"
+    ]
+  }
+}

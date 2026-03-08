@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "WarmiNet",
+    "slug": "warminet",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/logo/logo_warminet.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4b135f"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.warminet.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4b135f"
+      },
+      "package": "com.warminet.app",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "RECORD_AUDIO",
+        "VIBRATE",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+        }
+      }
+    },
+    "platforms": ["android", "ios"],
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "$(PRODUCT_NAME) necesita acceso a tu cámara para verificación de identidad."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "$(PRODUCT_NAME) necesita tu ubicación para funciones de seguridad."
+        }
+      ]
+    ]
+  }
+}
