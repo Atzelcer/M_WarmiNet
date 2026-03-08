@@ -17,6 +17,20 @@ import CrearPostModal from '../components/CrearPostModal';
 
 const { width } = Dimensions.get('window');
 
+// Mapeo de imágenes de evidencias
+const IMAGENES_EVIDENCIAS = {
+  rojo1: require('../../assets/puntos_rojos/rojo1.jpg'),
+  rojo2: require('../../assets/puntos_rojos/rojo2.jpg'),
+  rojo3: require('../../assets/puntos_rojos/rojo3.jpg'),
+};
+
+const obtenerImagen = (evidencia) => {
+  if (typeof evidencia === 'string') {
+    return IMAGENES_EVIDENCIAS[evidencia] || null;
+  }
+  return evidencia; // Si ya es un require() o URI
+};
+
 export default function FeedScreen({ navigation }) {
   const [posts, setPosts] = useState(POSTS_COMUNIDAD);
   const [modalCrear, setModalCrear] = useState(false);
@@ -121,13 +135,16 @@ export default function FeedScreen({ navigation }) {
                 showsHorizontalScrollIndicator={false}
                 style={styles.evidenciasContainer}
               >
-                {post.evidencias.map((evidencia, index) => (
-                  <Image
-                    key={index}
-                    source={typeof evidencia === 'string' ? { uri: evidencia } : evidencia}
-                    style={styles.evidenciaImagen}
-                  />
-                ))}
+                {post.evidencias.map((evidencia, index) => {
+                  const imagen = obtenerImagen(evidencia);
+                  return imagen ? (
+                    <Image
+                      key={index}
+                      source={imagen}
+                      style={styles.evidenciaImagen}
+                    />
+                  ) : null;
+                })}
               </ScrollView>
             )}
 
@@ -310,15 +327,16 @@ export default function FeedScreen({ navigation }) {
                 {postDetalle.evidencias && postDetalle.evidencias.length > 0 && (
                   <View style={styles.detalleEvidencias}>
                     <Text style={styles.detalleEvidenciasTitle}>📸 Evidencias</Text>
-                    {postDetalle.evidencias.map((evidencia, index) => (
-                      <Image
-                        key={index}
-                        source={
-                          typeof evidencia === 'string' ? { uri: evidencia } : evidencia
-                        }
-                        style={styles.detalleEvidenciaImagen}
-                      />
-                    ))}
+                    {postDetalle.evidencias.map((evidencia, index) => {
+                      const imagen = obtenerImagen(evidencia);
+                      return imagen ? (
+                        <Image
+                          key={index}
+                          source={imagen}
+                          style={styles.detalleEvidenciaImagen}
+                        />
+                      ) : null;
+                    })}
                   </View>
                 )}
 

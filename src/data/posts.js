@@ -31,7 +31,7 @@ export const POSTS_COMUNIDAD = [
     },
     descripcion: 'Grupo de hombres acosando verbalmente a mujeres que pasan. Están bebiendo en la esquina. Zona muy oscura por la noche. Recomiendo evitar esta calle después de las 6pm.',
     evidencias: [
-      require('../../assets/puntos_rojos/rojo2.jpg'),
+      'rojo2',
     ],
     tipo: 'ACOSO',
     reacciones: {
@@ -51,7 +51,7 @@ export const POSTS_COMUNIDAD = [
     },
     descripcion: 'Intentaron robarme hace 30 minutos. Un hombre me siguió desde la parada de micro. Logré correr a un lugar con más gente. TENGAN CUIDADO en esta zona, especialmente en horas de poca afluencia.',
     evidencias: [
-      require('../../assets/puntos_rojos/rojo3.jpg'),
+      'rojo3',
     ],
     tipo: 'ROBO_INTENTO',
     reacciones: {
