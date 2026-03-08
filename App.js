@@ -1,97 +1,51 @@
 import 'react-native-gesture-handler';
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
+import { initAWS } from './src/services/awsService';
 
-// APP SIMPLIFICADA PARA PROBAR
+// Pantallas
+import WelcomeScreen from './src/screens/WelcomeScreen';
+import CameraIDScreen from './src/screens/CameraIDScreen';
+import RegisterFormScreen from './src/screens/RegisterFormScreen';
+import FaceVerificationScreen from './src/screens/FaceVerificationScreen';
+import HomeMapScreen from './src/screens/HomeMapScreen';
+import PuntosRojosScreen from './src/screens/PuntosRojosScreen';
+import PanicoScreen from './src/screens/PanicoScreen';
+import TrayectoSeguroScreen from './src/screens/TrayectoSeguroScreen';
+import DemoMenuScreen from './src/screens/DemoMenuScreen';
+
+const Stack = createStackNavigator();
+
 export default function App() {
+  useEffect(() => {
+    // Inicializar AWS al cargar la app
+    initAWS();
+  }, []);
+
   return (
-    <View style={styles.container}>
+    <>
       <StatusBar style="light" />
-      
-      <View style={styles.header}>
-        <Text style={styles.title}>🛡️ WARMINET</Text>
-        <Text style={styles.subtitle}>App de Seguridad para Mujeres</Text>
-      </View>
-
-      <View style={styles.content}>
-        <Text style={styles.status}>✅ App funcionando correctamente</Text>
-        
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>🏠 Inicio</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>🔴 Puntos Rojos</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>🆘 Botón Pánico</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>🛣️ Rutas Seguras</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.footer}>
-        Si ves esto, la app está corriendo bien ✅
-      </Text>
-    </View>
+      <NavigationContainer>
+        <Stack.Navigator
+          initialRouteName="Welcome"
+          screenOptions={{
+            headerShown: false,
+            cardStyle: { backgroundColor: '#ffffff' },
+          }}
+        >
+          <Stack.Screen name="Welcome" component={WelcomeScreen} />
+          <Stack.Screen name="CameraID" component={CameraIDScreen} />
+          <Stack.Screen name="RegisterForm" component={RegisterFormScreen} />
+          <Stack.Screen name="FaceVerification" component={FaceVerificationScreen} />
+          <Stack.Screen name="HomeMap" component={HomeMapScreen} />
+          <Stack.Screen name="DemoMenu" component={DemoMenuScreen} />
+          <Stack.Screen name="PuntosRojos" component={PuntosRojosScreen} />
+          <Stack.Screen name="Panico" component={PanicoScreen} />
+          <Stack.Screen name="TrayectoSeguro" component={TrayectoSeguroScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    backgroundColor: '#4b135f',
-    paddingTop: 60,
-    paddingBottom: 30,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#fd71b2',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-  },
-  status: {
-    fontSize: 18,
-    textAlign: 'center',
-    color: '#4b135f',
-    fontWeight: 'bold',
-    marginBottom: 40,
-  },
-  button: {
-    backgroundColor: '#4b135f',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-    marginBottom: 15,
-    alignItems: 'center',
-    elevation: 3,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  footer: {
-    textAlign: 'center',
-    padding: 20,
-    color: '#666',
-    fontSize: 14,
-  },
-});

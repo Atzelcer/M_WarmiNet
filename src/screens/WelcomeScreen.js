@@ -29,10 +29,10 @@ export default function WelcomeScreen({ navigation }) {
         </Text>
 
         <View style={styles.featuresContainer}>
-          <FeatureItem icon="🗺️" text="Mapas de seguridad colaborativos" />
-          <FeatureItem icon="🚨" text="Botón de pánico inteligente" />
-          <FeatureItem icon="🛡️" text="Trayectos seguros monitoreados" />
-          <FeatureItem icon="👥" text="Red de apoyo entre mujeres" />
+          <FeatureItem icon="[MAPA]" text="Mapas de seguridad colaborativos" />
+          <FeatureItem icon="[SOS]" text="Botón de pánico inteligente" />
+          <FeatureItem icon="[SEGURO]" text="Trayectos seguros monitoreados" />
+          <FeatureItem icon="[RED]" text="Red de apoyo entre mujeres" />
         </View>
 
         <TouchableOpacity
@@ -46,7 +46,7 @@ export default function WelcomeScreen({ navigation }) {
           style={styles.demoButton}
           onPress={() => navigation.navigate('DemoMenu')}
         >
-          <Text style={styles.demoButtonText}>🎯 Ir directo a DEMOS</Text>
+          <Text style={styles.demoButtonText}>[DEMO] Ir directo a DEMOS</Text>
         </TouchableOpacity>
       </View>
     </View>

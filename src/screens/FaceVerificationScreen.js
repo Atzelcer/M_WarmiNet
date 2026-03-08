@@ -6,28 +6,17 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Platform,
 } from 'react-native';
-import { Camera } from 'expo-camera';
 import { COLORS } from '../constants/colors';
 
 export default function FaceVerificationScreen({ navigation }) {
-  const [hasPermission, setHasPermission] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraReady, setCameraReady] = useState(true);
 
   useEffect(() => {
-    (async () => {
-      if (Platform.OS === 'web') {
-        // En web, simular permiso concedido
-        setHasPermission(true);
-        setCameraReady(true);
-      } else {
-        const { status } = await Camera.requestCameraPermissionsAsync();
-        setHasPermission(status === 'granted');
-      }
-    })();
+    // Simulación sin cámara real para evitar crashes
+    setCameraReady(true);
   }, []);
 
   const startScan = () => {
@@ -56,8 +45,8 @@ export default function FaceVerificationScreen({ navigation }) {
     setTimeout(() => {
       setScanning(false);
       Alert.alert(
-        '✅ Rostro verificado correctamente',
-        '¡Bienvenida a WarmiNet!',
+        '[VERIFICADO] Rostro verificado correctamente',
+        'Bienvenida a WarmiNet',
         [
           {
             text: 'Entrar a la app',
@@ -68,32 +57,7 @@ export default function FaceVerificationScreen({ navigation }) {
     }, 500);
   };
 
-  if (hasPermission === null) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
 
-  if (hasPermission === false) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.content}>
-          <Text style={styles.errorText}>Sin acceso a la cámara</Text>
-          <Text style={styles.errorSubtext}>
-            Por favor, habilita los permisos de cámara en la configuración
-          </Text>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.buttonText}>Volver</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -114,33 +78,17 @@ export default function FaceVerificationScreen({ navigation }) {
         </Text>
 
         <View style={styles.cameraContainer}>
-          {Platform.OS === 'web' ? (
-            <View style={styles.webCameraPlaceholder}>
-              <Text style={styles.webCameraText}>👤</Text>
-              <Text style={styles.webCameraSubtext}>Modo web - Simulación de cámara</Text>
+          <View style={styles.cameraPlaceholder}>
+            <View style={styles.faceFrame}>
+              <Text style={styles.faceIcon}>[ROSTRO]</Text>
               {scanning && (
                 <View style={styles.scanLine}>
                   <View style={styles.scanLineBar} />
                 </View>
               )}
             </View>
-          ) : (
-            <Camera
-              style={styles.camera}
-              type={Camera.Constants.Type.front}
-              onCameraReady={() => setCameraReady(true)}
-            >
-              <View style={styles.overlay}>
-                <View style={styles.faceFrame}>
-                  {scanning && (
-                    <View style={styles.scanLine}>
-                      <View style={styles.scanLineBar} />
-                    </View>
-                  )}
-                </View>
-              </View>
-            </Camera>
-          )}
+            <Text style={styles.cameraSubtext}>Simulación de verificación facial</Text>
+          </View>
         </View>
 
         {scanning && (
@@ -162,14 +110,14 @@ export default function FaceVerificationScreen({ navigation }) {
             disabled={!cameraReady}
           >
             <Text style={styles.scanButtonText}>
-              {cameraReady ? '📷 Iniciar verificación' : '⏳ Preparando cámara...'}
+              [INICIAR] Comenzar verificación
             </Text>
           </TouchableOpacity>
         )}
 
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
-            ℹ️ Esta verificación asegura que eres tú quien está registrándose.
+            [INFO] Esta verificación asegura que eres tú quien está registrándose.
             Tu rostro se usará para futuras autenticaciones de seguridad.
           </Text>
         </View>
@@ -331,7 +279,29 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 18,
     fontWeight: 'bold',
-  },  webCameraPlaceholder: {
+  },
+  cameraPlaceholder: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    borderStyle: 'dashed',
+  },
+  faceIcon: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    marginBottom: 10,
+  },
+  cameraSubtext: {
+    fontSize: 14,
+    color: COLORS.neutral,
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  webCameraPlaceholder: {
     flex: 1,
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
@@ -348,4 +318,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.neutral,
     textAlign: 'center',
-  },});
+  },
+});

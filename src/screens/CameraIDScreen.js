@@ -77,7 +77,7 @@ export default function CameraIDScreen({ navigation }) {
       
       if (esMujer) {
         Alert.alert(
-          '✅ Validación exitosa',
+          '[VALIDADO] Validación exitosa',
           'Eres mujer. Continúa con tu registro.',
           [
             {
@@ -88,7 +88,7 @@ export default function CameraIDScreen({ navigation }) {
         );
       } else {
         Alert.alert(
-          '❌ Acceso denegado',
+          '[DENEGADO] Acceso denegado',
           'No puedes registrarte en la app. No cumples con las políticas de privacidad y acceso exclusivo para mujeres.',
           [
             {
@@ -148,7 +148,7 @@ export default function CameraIDScreen({ navigation }) {
             <Image source={{ uri: anverso }} style={styles.imagePreview} />
           ) : (
             <View style={styles.placeholder}>
-              <Text style={styles.placeholderText}>📄</Text>
+              <Text style={styles.placeholderText}>[DOC]</Text>
               <Text style={styles.placeholderSubtext}>Anverso del CI</Text>
             </View>
           )}
@@ -157,13 +157,13 @@ export default function CameraIDScreen({ navigation }) {
               style={styles.actionButton}
               onPress={() => takePhoto('anverso')}
             >
-              <Text style={styles.actionButtonText}>📷 Tomar foto</Text>
+              <Text style={styles.actionButtonText}>[CAM] Tomar foto</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButtonSecondary}
               onPress={() => pickImage('anverso')}
             >
-              <Text style={styles.actionButtonTextSecondary}>📁 Galería</Text>
+              <Text style={styles.actionButtonTextSecondary}>[GAL] Galería</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -175,7 +175,7 @@ export default function CameraIDScreen({ navigation }) {
             <Image source={{ uri: reverso }} style={styles.imagePreview} />
           ) : (
             <View style={styles.placeholder}>
-              <Text style={styles.placeholderText}>📄</Text>
+              <Text style={styles.placeholderText}>[DOC]</Text>
               <Text style={styles.placeholderSubtext}>Reverso del CI</Text>
             </View>
           )}
@@ -184,13 +184,13 @@ export default function CameraIDScreen({ navigation }) {
               style={styles.actionButton}
               onPress={() => takePhoto('reverso')}
             >
-              <Text style={styles.actionButtonText}>📷 Tomar foto</Text>
+              <Text style={styles.actionButtonText}>[CAM] Tomar foto</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButtonSecondary}
               onPress={() => pickImage('reverso')}
             >
-              <Text style={styles.actionButtonTextSecondary}>📁 Galería</Text>
+              <Text style={styles.actionButtonTextSecondary}>[GAL] Galería</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -219,7 +219,7 @@ export default function CameraIDScreen({ navigation }) {
 
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
-            ℹ️ Para la demo: usa imágenes con nombres que contengan "mujer" o
+            [INFO] Para la demo: usa imágenes con nombres que contengan "mujer" o
             "hombre" para simular la detección OCR.
           </Text>
         </View>

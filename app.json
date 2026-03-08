@@ -28,31 +28,21 @@
         "CAMERA",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "RECORD_AUDIO",
-        "VIBRATE",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
-      ],
-      "config": {
-        "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
-        }
-      }
-    },
-    "platforms": ["android", "ios"],
-    "plugins": [
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "$(PRODUCT_NAME) necesita acceso a tu cámara para verificación de identidad."
-        }
-      ],
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "$(PRODUCT_NAME) necesita tu ubicación para funciones de seguridad."
-        }
+        "VIBRATE"
       ]
-    ]
+    },
+    "platforms": [
+      "android",
+      "ios"
+    ],
+    "plugins": [
+      "expo-camera",
+      "expo-location"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2193bff3-8ac7-4a32-b813-c02b5da7d199"
+      }
+    }
   }
 }

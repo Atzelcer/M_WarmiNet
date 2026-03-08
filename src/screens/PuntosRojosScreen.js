@@ -52,7 +52,7 @@ export default function PuntosRojosScreen({ navigation }) {
     
     setTimeout(() => {
       Alert.alert(
-        '⚠️ ALERTA DE ZONA PELIGROSA',
+        '[ALERTA] ZONA PELIGROSA',
         `Estás a 20 metros de un punto rojo:\n\n${punto.descripcion}\n\nReportado el ${punto.fecha}`,
         [
           {
@@ -140,7 +140,7 @@ export default function PuntosRojosScreen({ navigation }) {
                 escenarioActual === 1 && styles.escenarioButtonTextActive,
               ]}
             >
-              1️⃣ Crear punto
+              [1] Crear punto
             </Text>
           </TouchableOpacity>
 
@@ -157,7 +157,7 @@ export default function PuntosRojosScreen({ navigation }) {
                 escenarioActual === 2 && styles.escenarioButtonTextActive,
               ]}
             >
-              2️⃣ Aviso cercano
+              [2] Aviso cercano
             </Text>
           </TouchableOpacity>
 
@@ -174,7 +174,7 @@ export default function PuntosRojosScreen({ navigation }) {
                 escenarioActual === 3 && styles.escenarioButtonTextActive,
               ]}
             >
-              3️⃣ Otro punto
+              [3] Otro punto
             </Text>
           </TouchableOpacity>
         </ScrollView>

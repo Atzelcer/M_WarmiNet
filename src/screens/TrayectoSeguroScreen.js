@@ -56,7 +56,7 @@ export default function TrayectoSeguroScreen({ navigation }) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     
     Alert.alert(
-      '✅ Trayecto iniciado',
+      '[INICIADO] Trayecto iniciado',
       `Ruta: ${ruta.nombre}\nTiempo: ${ruta.tiempoMinutos} minutos\n\n(Demo: ${ruta.tiempoDemo} segundos)\n\nTus personas de confianza serán notificadas si no llegas a tiempo.`
     );
   };
@@ -83,7 +83,7 @@ export default function TrayectoSeguroScreen({ navigation }) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     
     Alert.alert(
-      '✅ Tiempo extendido',
+      '[EXTENDIDO] Tiempo extendido',
       `Se agregaron ${ruta.tiempoMinutos} minutos más a tu trayecto.`
     );
   };
@@ -102,7 +102,7 @@ export default function TrayectoSeguroScreen({ navigation }) {
     });
 
     Alert.alert(
-      '⚠️ Alerta enviada a familia',
+      '[ALERTA] Alerta enviada a familia',
       `Se notificó a tus personas de confianza:\n\n` +
         USUARIOS_DEMO.mujer.personasConfianza.map(
           (p) => `• ${p.nombre} (${p.relacion}): ${p.celular}`
@@ -114,7 +114,7 @@ export default function TrayectoSeguroScreen({ navigation }) {
 
   const confirmarLlegada = () => {
     Alert.alert(
-      '✅ Llegada confirmada',
+      '[LLEGADA] Llegada confirmada',
       '¡Llegaste a salvo! Tus personas de confianza serán notificadas.',
       [
         {
